@@ -80,7 +80,36 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
     setShowPopup(false);
   };
 
-  if (!currentAd) return null;
+  const getBannerClass = () => {
+    switch (position) {
+      case "top":
+        return "w-full h-20";
+      case "sidebar":
+        return "w-full h-32";
+      case "bottom":
+        return "w-full h-16";
+      default:
+        return "w-full";
+    }
+  };
+
+  // Show placeholder if no ad available
+  if (!currentAd) {
+    return (
+      <Card className={`${getBannerClass()} ${className} border-dashed border-2 border-muted`}>
+        <div className="h-full flex items-center justify-center p-4 bg-muted/20">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground font-medium">
+              Ad Space - {position.charAt(0).toUpperCase() + position.slice(1)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Configure ads in Admin Panel
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   // Popup ad
   if (position === "popup" && showPopup) {
@@ -118,25 +147,13 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   }
 
   // Banner ads
-  const getBannerClass = () => {
-    switch (position) {
-      case "top":
-        return "w-full h-20";
-      case "sidebar":
-        return "w-full h-32";
-      case "bottom":
-        return "w-full h-16";
-      default:
-        return "w-full";
-    }
-  };
 
   return (
     <Card 
       className={`${getBannerClass()} ${className} cursor-pointer hover:shadow-md transition-shadow overflow-hidden`}
       onClick={() => handleAdClick(currentAd)}
     >
-      <div className="h-full flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-accent/5">
+      <div className="h-full flex items-center justify-between p-4 bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/20">
         <div className="flex-1">
           <h4 className="font-semibold text-sm">{currentAd.title}</h4>
           {position !== "bottom" && (
