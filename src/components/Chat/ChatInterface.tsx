@@ -259,7 +259,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4 h-[300px]" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4 h-[280px]" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-8">
