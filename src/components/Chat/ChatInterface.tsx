@@ -242,7 +242,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
   const popularEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥'];
 
   return (
-    <Card className="h-[400px] flex flex-col">
+    <Card className="h-[540px] flex flex-col">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Global Chat</h3>
@@ -259,7 +259,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
         </div>
       </div>
 
-      <div className="p-4 h-[280px] overflow-y-auto border-gray-200" ref={scrollAreaRef}>
+      <div className="p-4 h-[420px] overflow-y-auto border-gray-200" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-8">
