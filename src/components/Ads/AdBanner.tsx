@@ -30,16 +30,12 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   const [showPopup, setShowPopup] = useState(false);
   const [showDetailPopup, setShowDetailPopup] = useState(false);
 
-  console.log(`AdBanner rendered for position: ${position}`);
-
   useEffect(() => {
-    console.log(`AdBanner useEffect triggered for position: ${position}`);
     fetchAds();
   }, [position]);
 
   const fetchAds = async () => {
     try {
-      console.log('Fetching ads for position:', position);
       const { data: ads, error } = await supabase
         .from('ads')
         .select('*')
@@ -47,15 +43,12 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
         .eq('is_active', true)
         .order('priority', { ascending: false });
 
-      console.log('Ads query result:', { ads, error, position });
-
       if (error) {
         console.error('Error fetching ads:', error);
         return;
       }
 
       if (ads && ads.length > 0) {
-        console.log(`Found ${ads.length} ads for position ${position}:`, ads);
         setAds(ads);
         setCurrentAd(ads[0]);
         
@@ -138,7 +131,7 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
         <div className="h-full flex items-center justify-center p-4 bg-muted/20">
           <div className="text-center">
             <p className="text-sm text-muted-foreground font-medium">
-              DEBUG: AdBanner for {position} - Ads: {ads.length} - Current: {currentAd ? 'Yes' : 'No'}
+              Ad Space - {position.charAt(0).toUpperCase() + position.slice(1)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Configure ads in Admin Panel
