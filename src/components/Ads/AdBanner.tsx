@@ -30,7 +30,10 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   const [showPopup, setShowPopup] = useState(false);
   const [showDetailPopup, setShowDetailPopup] = useState(false);
 
+  console.log(`AdBanner rendered for position: ${position}`);
+
   useEffect(() => {
+    console.log(`AdBanner useEffect triggered for position: ${position}`);
     fetchAds();
   }, [position]);
 
@@ -135,7 +138,7 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
         <div className="h-full flex items-center justify-center p-4 bg-muted/20">
           <div className="text-center">
             <p className="text-sm text-muted-foreground font-medium">
-              Ad Space - {position.charAt(0).toUpperCase() + position.slice(1)}
+              DEBUG: AdBanner for {position} - Ads: {ads.length} - Current: {currentAd ? 'Yes' : 'No'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Configure ads in Admin Panel
