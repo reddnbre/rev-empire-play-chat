@@ -177,82 +177,100 @@ const Index = () => {
       />
 
       {/* Top Ad Banner */}
-      <div className="container mx-auto px-4 pt-4">
-        <AdBanner position="top" />
+      <div className="w-full px-4 pt-4">
+        <div className="max-w-full mx-auto">
+          <AdBanner position="top" />
+        </div>
       </div>
 
-      <main className="container mx-auto px-4 py-6">
-        {currentView === "admin" && (
-          <div className="space-y-6">
-            <Button 
-              variant="outline" 
-              onClick={() => setCurrentView("main")}
-            >
-              ← Back to Main
-            </Button>
-            <AdminPanel />
+      {/* Main Layout with Side Banners */}
+      <div className="flex w-full">
+        {/* Left Sidebar Banner */}
+        <div className="hidden lg:block w-40 flex-shrink-0 p-4">
+          <div className="sticky top-4">
+            <AdBanner position="sidebar" className="h-[600px]" />
           </div>
-        )}
+        </div>
 
-        {currentView === "game" && (
-          <div className="space-y-6">
-            {renderGameComponent()}
+        {/* Main Content Area */}
+        <main className="flex-1 px-4 py-6 min-w-0">
+          {currentView === "admin" && (
+            <div className="space-y-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentView("main")}
+              >
+                ← Back to Main
+              </Button>
+              <AdminPanel />
+            </div>
+          )}
+
+          {currentView === "game" && (
+            <div className="space-y-6">
+              {renderGameComponent()}
+            </div>
+          )}
+
+          {currentView === "main" && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+              {/* Games Section */}
+              <div className="lg:col-span-1">
+                <GamesList onStartGame={handleStartGame} />
+              </div>
+
+              {/* Chat Section */}
+              <div className="lg:col-span-1">
+                <ChatInterface 
+                  currentUser={user} 
+                  guestName={guestName}
+                  onRequestName={() => setShowNameInput(true)}
+                />
+              </div>
+
+              {/* Welcome Info */}
+              <div className="lg:col-span-1 space-y-4">
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Welcome to RevEmpire!</h3>
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <h4 className="font-medium">🎮 14 Multiplayer Games</h4>
+                      <p className="text-muted-foreground">
+                        Challenge friends in strategy, puzzle, and party games
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium">💬 Real-time Chat</h4>
+                      <p className="text-muted-foreground">
+                        Connect with players worldwide (8-hour auto-delete)
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium">🏆 Compete & Win</h4>
+                      <p className="text-muted-foreground">
+                        Join tournaments and climb the leaderboards
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Right Sidebar Banner */}
+        <div className="hidden lg:block w-40 flex-shrink-0 p-4">
+          <div className="sticky top-4">
+            <AdBanner position="sidebar" className="h-[600px]" />
           </div>
-        )}
-
-        {currentView === "main" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-            {/* Games Section */}
-            <div className="lg:col-span-1">
-              <GamesList onStartGame={handleStartGame} />
-            </div>
-
-            {/* Chat Section */}
-            <div className="lg:col-span-1">
-              <ChatInterface 
-                currentUser={user} 
-                guestName={guestName}
-                onRequestName={() => setShowNameInput(true)}
-              />
-            </div>
-
-            {/* Sidebar with Ads */}
-            <div className="lg:col-span-1 space-y-4">
-              <AdBanner position="sidebar" />
-              
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Welcome to RevEmpire!</h3>
-                <div className="space-y-4 text-sm">
-                  <div>
-                    <h4 className="font-medium">🎮 14 Multiplayer Games</h4>
-                    <p className="text-muted-foreground">
-                      Challenge friends in strategy, puzzle, and party games
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">💬 Real-time Chat</h4>
-                    <p className="text-muted-foreground">
-                      Connect with players worldwide (8-hour auto-delete)
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">🏆 Compete & Win</h4>
-                    <p className="text-muted-foreground">
-                      Join tournaments and climb the leaderboards
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <AdBanner position="sidebar" />
-            </div>
-          </div>
-        )}
-      </main>
+        </div>
+      </div>
 
       {/* Bottom Ad Banner */}
-      <div className="container mx-auto px-4 pb-4">
-        <AdBanner position="bottom" />
+      <div className="w-full px-4 pb-4">
+        <div className="max-w-full mx-auto">
+          <AdBanner position="bottom" />
+        </div>
       </div>
 
       {/* Popup Ad */}

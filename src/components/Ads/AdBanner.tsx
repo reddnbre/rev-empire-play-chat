@@ -123,22 +123,23 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   };
 
   const getBannerClass = () => {
+    const baseClass = className || "";
     switch (position) {
       case "top":
-        return "w-full h-20";
+        return `w-full h-20 ${baseClass}`;
       case "sidebar":
-        return "w-full h-32";
+        return baseClass.includes("h-") ? `w-full ${baseClass}` : `w-full h-32 ${baseClass}`;
       case "bottom":
-        return "w-full h-16";
+        return `w-full h-16 ${baseClass}`;
       default:
-        return "w-full";
+        return `w-full ${baseClass}`;
     }
   };
 
   // Show placeholder if no ad available
   if (!currentAd) {
     return (
-      <Card className={`${getBannerClass()} ${className} border-dashed border-2 border-muted`}>
+      <Card className={`${getBannerClass()} border-dashed border-2 border-muted`}>
         <div className="h-full flex items-center justify-center p-4 bg-muted/20">
           <div className="text-center">
             <p className="text-sm text-muted-foreground font-medium">
@@ -251,10 +252,10 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   // Banner ads
   return (
     <Card 
-      className={`${getBannerClass()} ${className} cursor-pointer hover:shadow-md transition-shadow overflow-hidden`}
+      className={`${getBannerClass()} cursor-pointer hover:shadow-md transition-shadow overflow-hidden`}
       onClick={() => handleAdClick(currentAd)}
     >
-      <div className="h-full flex items-center justify-between p-4 bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/20">
+      <div className={`h-full flex ${position === 'sidebar' && className?.includes('h-') ? 'flex-col' : 'flex-row'} items-center justify-between p-4 bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/20`}>
         <div className="flex-1">
           <h4 className="font-semibold text-sm">{currentAd.title}</h4>
           {position !== "bottom" && (
@@ -264,7 +265,7 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
           )}
         </div>
         
-        <div className="text-xs text-primary font-medium ml-4">
+        <div className={`text-xs text-primary font-medium ${position === 'sidebar' && className?.includes('h-') ? 'mt-4' : 'ml-4'}`}>
           {currentAd.showPopup ? "Click for Details →" : "Learn More →"}
         </div>
       </div>
