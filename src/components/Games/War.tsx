@@ -30,6 +30,9 @@ const War = ({ onBack }: WarProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [gameResult, setGameResult] = useState<"win" | "lose">("win");
+  const [isWar, setIsWar] = useState(false);
+  const [cardsAtStake, setCardsAtStake] = useState<CardType[]>([]);
+  const [warDepth, setWarDepth] = useState(0);
 
   useEffect(() => {
     initializeGame();
@@ -71,51 +74,114 @@ const War = ({ onBack }: WarProps) => {
     setWinner("");
     setRoundWinner("");
     setIsPlaying(false);
+    setIsWar(false);
+    setCardsAtStake([]);
+    setWarDepth(0);
   };
 
   const playRound = () => {
     if (playerDeck.length === 0 || botDeck.length === 0 || isPlaying) return;
 
     setIsPlaying(true);
-    const newPlayerCard = playerDeck[0];
-    const newBotCard = botDeck[0];
     
-    setPlayerCard(newPlayerCard);
-    setBotCard(newBotCard);
+    // Check if we have enough cards for war (need at least 4 cards each)
+    if (isWar && (playerDeck.length < 4 || botDeck.length < 4)) {
+      // Not enough cards for war - whoever has fewer cards loses
+      if (playerDeck.length < botDeck.length) {
+        endGame("bot");
+      } else {
+        endGame("player");
+      }
+      setIsPlaying(false);
+      return;
+    }
 
-    // Remove cards from decks
-    const newPlayerDeck = playerDeck.slice(1);
-    const newBotDeck = botDeck.slice(1);
+    let currentPlayerDeck = [...playerDeck];
+    let currentBotDeck = [...botDeck];
+    let currentCardsAtStake = [...cardsAtStake];
+
+    let playerWarCard: CardType;
+    let botWarCard: CardType;
+
+    if (isWar) {
+      // In War: each player puts down 4 cards (3 face down, 1 face up)
+      const playerWarCards = currentPlayerDeck.splice(0, 4);
+      const botWarCards = currentBotDeck.splice(0, 4);
+      
+      // Add all war cards to stakes
+      currentCardsAtStake.push(...playerWarCards, ...botWarCards);
+      
+      // The 4th card (index 3) is the one we compare
+      playerWarCard = playerWarCards[3];
+      botWarCard = botWarCards[3];
+    } else {
+      // Regular round: each player draws one card
+      playerWarCard = currentPlayerDeck.shift()!;
+      botWarCard = currentBotDeck.shift()!;
+      
+      // These cards are at stake
+      currentCardsAtStake = [playerWarCard, botWarCard];
+    }
+    
+    setPlayerCard(playerWarCard);
+    setBotCard(botWarCard);
+    setCardsAtStake(currentCardsAtStake);
 
     setTimeout(() => {
-      if (newPlayerCard.numValue > newBotCard.numValue) {
-        // Player wins
-        setPlayerDeck([...newPlayerDeck, newPlayerCard, newBotCard]);
-        setBotDeck(newBotDeck);
+      if (playerWarCard.numValue > botWarCard.numValue) {
+        // Player wins - gets all cards at stake
+        const newPlayerDeck = [...currentPlayerDeck, ...currentCardsAtStake];
+        setPlayerDeck(newPlayerDeck);
+        setBotDeck(currentBotDeck);
         setRoundWinner("player");
         setScores(prev => ({ ...prev, player: prev.player + 1 }));
-      } else if (newBotCard.numValue > newPlayerCard.numValue) {
-        // Bot wins
-        setBotDeck([...newBotDeck, newBotCard, newPlayerCard]);
-        setPlayerDeck(newPlayerDeck);
+        setIsWar(false);
+        setWarDepth(0);
+        setCardsAtStake([]);
+        
+        toast({
+          title: "You Won!",
+          description: `You collected ${currentCardsAtStake.length} cards!`,
+        });
+      } else if (botWarCard.numValue > playerWarCard.numValue) {
+        // Bot wins - gets all cards at stake
+        const newBotDeck = [...currentBotDeck, ...currentCardsAtStake];
+        setBotDeck(newBotDeck);
+        setPlayerDeck(currentPlayerDeck);
         setRoundWinner("bot");
         setScores(prev => ({ ...prev, bot: prev.bot + 1 }));
+        setIsWar(false);
+        setWarDepth(0);
+        setCardsAtStake([]);
+        
+        toast({
+          title: "Bot Won!",
+          description: `Bot collected ${currentCardsAtStake.length} cards!`,
+        });
       } else {
-        // Tie - each player keeps their card
-        setPlayerDeck(newPlayerDeck);
-        setBotDeck(newBotDeck);
+        // Another tie - escalate to War or continue War
+        setPlayerDeck(currentPlayerDeck);
+        setBotDeck(currentBotDeck);
         setRoundWinner("tie");
+        setIsWar(true);
+        setWarDepth(prev => prev + 1);
+        setCardsAtStake(currentCardsAtStake);
+        
+        toast({
+          title: "WAR!",
+          description: warDepth > 0 ? `Double War! ${currentCardsAtStake.length} cards at stake!` : "Time for War! Each player puts down 4 cards!",
+        });
       }
 
       // Check for game end
-      if (newPlayerDeck.length === 0) {
+      if (currentPlayerDeck.length === 0) {
         endGame("bot");
-      } else if (newBotDeck.length === 0) {
+      } else if (currentBotDeck.length === 0) {
         endGame("player");
       }
 
       setIsPlaying(false);
-    }, 1000);
+    }, 1500);
   };
 
   const endGame = (gameWinner: string) => {
@@ -140,9 +206,12 @@ const War = ({ onBack }: WarProps) => {
 
   const getRoundResult = () => {
     if (!roundWinner) return "";
-    if (roundWinner === "player") return "You won this round!";
-    if (roundWinner === "bot") return "Bot won this round!";
-    return "It's a tie!";
+    if (roundWinner === "player") return `You won this round and collected ${cardsAtStake.length || 2} cards!`;
+    if (roundWinner === "bot") return `Bot won this round and collected ${cardsAtStake.length || 2} cards!`;
+    if (isWar) {
+      return `WAR! ${cardsAtStake.length} cards at stake! Each player draws 4 cards!`;
+    }
+    return "It's a tie - Time for WAR!";
   };
 
   return (
@@ -167,7 +236,9 @@ const War = ({ onBack }: WarProps) => {
             War Card Battle
           </CardTitle>
           <CardDescription>
-            {gameStatus === "playing" && "Draw cards and see who has the higher value!"}
+            {gameStatus === "playing" && (isWar 
+              ? `WAR MODE! ${cardsAtStake.length} cards at stake!` 
+              : "Draw cards and see who has the higher value!")}
             {gameStatus === "finished" && `${winner === "player" ? "You" : "Bot"} won the game!`}
           </CardDescription>
         </CardHeader>
@@ -242,15 +313,15 @@ const War = ({ onBack }: WarProps) => {
           {/* Game Controls */}
           <div className="flex justify-center gap-4">
             {gameStatus === "playing" ? (
-              <Button
-                onClick={playRound}
-                disabled={isPlaying || playerDeck.length === 0 || botDeck.length === 0}
-                className="flex items-center gap-2"
-                size="lg"
-              >
-                <Zap className="h-4 w-4" />
-                {isPlaying ? "Drawing..." : "Draw Cards"}
-              </Button>
+                <Button
+                  onClick={playRound}
+                  disabled={isPlaying || playerDeck.length === 0 || botDeck.length === 0}
+                  className="flex items-center gap-2"
+                  size="lg"
+                >
+                  <Zap className="h-4 w-4" />
+                  {isPlaying ? (isWar ? "War in progress..." : "Drawing...") : (isWar ? "Continue War!" : "Draw Cards")}
+                </Button>
             ) : (
               <Button
                 variant="outline"
@@ -269,6 +340,8 @@ const War = ({ onBack }: WarProps) => {
           {/* Game Instructions */}
           <div className="text-center text-sm text-muted-foreground space-y-1">
             <p>Higher card wins the round and takes both cards!</p>
+            <p>On a tie, it's WAR! Each player puts down 3 cards face-down and 1 face-up.</p>
+            <p>Highest face-up card wins ALL cards at stake!</p>
             <p>Win by collecting all 52 cards from your opponent.</p>
           </div>
         </CardContent>
