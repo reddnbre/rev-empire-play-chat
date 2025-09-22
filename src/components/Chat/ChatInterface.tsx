@@ -259,8 +259,8 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollAreaRef}>
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 p-4 h-[300px] overflow-y-auto" ref={scrollAreaRef}>
+        <div className="space-y-4 pr-4">
           {messages.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
