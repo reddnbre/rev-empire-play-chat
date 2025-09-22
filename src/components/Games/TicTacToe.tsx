@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCcw, Trophy, Users } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trophy, Users, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import GameResultDialog from "./GameResultDialog";
+import GameLobby from "./GameLobby";
+import InGameChat from "./InGameChat";
+import CelebrationOverlay from "./CelebrationOverlay";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface TicTacToeProps {
   onBack: () => void;
@@ -12,18 +16,22 @@ interface TicTacToeProps {
 
 type Player = "X" | "O" | null;
 type Board = Player[];
-type GameStatus = "waiting" | "playing" | "finished";
+type GameStatus = "lobby" | "waiting" | "playing" | "finished" | "spectating";
 
 const TicTacToe = ({ onBack }: TicTacToeProps) => {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<Player>("X");
-  const [gameStatus, setGameStatus] = useState<GameStatus>("playing");
+  const [gameStatus, setGameStatus] = useState<GameStatus>("lobby");
   const [winner, setWinner] = useState<Player>(null);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const [gameMode, setGameMode] = useState<"pvp" | "bot">("pvp");
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [gameResult, setGameResult] = useState<"win" | "lose" | "draw">("win");
   const [resultMessage, setResultMessage] = useState("");
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [chatMinimized, setChatMinimized] = useState(true);
+  const [spectatorCount] = useState(Math.floor(Math.random() * 5) + 1);
+  const { playMove, playWin, playLose } = useSoundEffects();
 
   const winningCombinations = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -55,15 +63,23 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
           [board[a]!]: prev[board[a] as "X" | "O"] + 1 
         }));
         
-        // Show result dialog
+        // Show celebration and result dialog
         if (gameMode === "pvp") {
           setGameResult("win");
           setResultMessage(`Player ${board[a]} wins! 🎉`);
+          playWin();
         } else {
-          setGameResult(board[a] === "X" ? "win" : "lose");
-          setResultMessage(board[a] === "X" ? "You won! Great job! 🎉" : "Bot wins! Try again! 🤖");
+          const playerWon = board[a] === "X";
+          setGameResult(playerWon ? "win" : "lose");
+          setResultMessage(playerWon ? "You won! Great job! 🎉" : "Bot wins! Try again! 🤖");
+          if (playerWon) playWin(); else playLose();
         }
-        setShowResultDialog(true);
+        
+        setShowCelebration(true);
+        setTimeout(() => {
+          setShowCelebration(false);
+          setShowResultDialog(true);
+        }, 3000);
         return;
       }
     }
@@ -73,10 +89,14 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
       setGameStatus("finished");
       setScores(prev => ({ ...prev, draws: prev.draws + 1 }));
       
-      // Show draw dialog
+      // Show draw celebration and dialog
       setGameResult("draw");
       setResultMessage("It's a tie! Good game! 🤝");
-      setShowResultDialog(true);
+      setShowCelebration(true);
+      setTimeout(() => {
+        setShowCelebration(false);
+        setShowResultDialog(true);
+      }, 3000);
     }
   };
 
@@ -131,6 +151,7 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
   const makeMove = (index: number) => {
     if (board[index] || gameStatus !== "playing") return;
 
+    playMove();
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
     setBoard(newBoard);
@@ -143,6 +164,40 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
     setGameStatus("playing");
     setWinner(null);
     setShowResultDialog(false);
+    setShowCelebration(false);
+  };
+
+  const handleStartPvP = () => {
+    setGameMode("pvp");
+    setGameStatus("waiting");
+    // Simulate finding a player after 5-10 seconds
+    setTimeout(() => {
+      setGameStatus("playing");
+      toast({
+        title: "Player found!",
+        description: "Starting game...",
+      });
+    }, Math.random() * 5000 + 5000);
+  };
+
+  const handleStartBot = () => {
+    setGameMode("bot");
+    setGameStatus("playing");
+  };
+
+  const handleSpectate = () => {
+    setGameStatus("spectating");
+    // Simulate spectating a random game
+    const randomBoard = Array(9).fill(null);
+    const moves = Math.floor(Math.random() * 6) + 1;
+    for (let i = 0; i < moves; i++) {
+      const pos = Math.floor(Math.random() * 9);
+      if (!randomBoard[pos]) {
+        randomBoard[pos] = i % 2 === 0 ? "X" : "O";
+      }
+    }
+    setBoard(randomBoard);
+    setCurrentPlayer(moves % 2 === 0 ? "X" : "O");
   };
 
   const resetScores = () => {
@@ -150,21 +205,40 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
     resetGame();
   };
 
+  // Show lobby first
+  if (gameStatus === "lobby") {
+    return (
+      <GameLobby
+        gameName="TicTacToe"
+        onStartWithBot={handleStartBot}
+        onStartPvP={handleStartPvP}
+        onSpectate={handleSpectate}
+        onBack={onBack}
+      />
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={() => setGameStatus("lobby")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Games
+          Back to Lobby
         </Button>
         <div className="flex gap-2">
           <Badge variant={gameMode === "pvp" ? "default" : "secondary"}>
             <Users className="h-3 w-3 mr-1" />
-            PvP
+            {gameStatus === "spectating" ? "Spectating" : "PvP"}
           </Badge>
           <Badge variant={gameMode === "bot" ? "default" : "secondary"}>
-            Bot
+            {gameMode === "bot" ? "Bot" : gameStatus === "waiting" ? "Waiting..." : ""}
           </Badge>
+          {gameStatus === "spectating" && (
+            <Badge variant="outline" className="text-orange-500 border-orange-500">
+              <Eye className="h-3 w-3 mr-1" />
+              {spectatorCount} watching
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -175,9 +249,11 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
             TicTacToe Battle
           </CardTitle>
           <CardDescription>
+            {gameStatus === "waiting" && "Waiting for another player..."}
             {gameStatus === "playing" && `Player ${currentPlayer}'s turn`}
             {gameStatus === "finished" && winner && `Player ${winner} wins!`}
             {gameStatus === "finished" && !winner && "It's a draw!"}
+            {gameStatus === "spectating" && "Watching live game"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -222,25 +298,45 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
           </div>
 
           {/* Game Controls */}
-          <div className="flex justify-center gap-4">
-            <Button
-              variant="outline"
-              onClick={resetGame}
-              className="flex items-center gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              New Game
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setGameMode(gameMode === "pvp" ? "bot" : "pvp")}
-            >
-              Switch to {gameMode === "pvp" ? "Bot" : "PvP"}
-            </Button>
-            <Button variant="outline" onClick={resetScores}>
-              Reset Scores
-            </Button>
-          </div>
+          {gameStatus !== "spectating" && (
+            <div className="flex justify-center gap-4">
+              <Button
+                variant="outline"
+                onClick={resetGame}
+                className="flex items-center gap-2"
+                disabled={gameStatus === "waiting"}
+              >
+                <RotateCcw className="h-4 w-4" />
+                New Game
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setGameStatus("lobby")}
+              >
+                Change Mode
+              </Button>
+              <Button variant="outline" onClick={resetScores}>
+                Reset Scores
+              </Button>
+            </div>
+          )}
+
+          {gameStatus === "spectating" && (
+            <div className="flex justify-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setGameStatus("lobby")}
+              >
+                Stop Spectating
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleStartPvP}
+              >
+                Join Game
+              </Button>
+            </div>
+          )}
 
           {/* Game Instructions */}
           <div className="text-center text-sm text-muted-foreground space-y-1">
@@ -263,6 +359,24 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
         onNewGame={resetGame}
         onBackToChat={onBack}
         gameName="TicTacToe"
+      />
+
+      {/* In-Game Chat */}
+      {(gameStatus === "playing" || gameStatus === "spectating") && (
+        <InGameChat
+          isMinimized={chatMinimized}
+          onToggleMinimize={() => setChatMinimized(!chatMinimized)}
+          currentPlayer="player1"
+          spectatorCount={spectatorCount}
+        />
+      )}
+
+      {/* Celebration Overlay */}
+      <CelebrationOverlay
+        show={showCelebration}
+        type={gameResult}
+        message={resultMessage}
+        onComplete={() => setShowCelebration(false)}
       />
     </div>
   );

@@ -38,6 +38,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
   const [isRecording, setIsRecording] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [someoneTyping, setSomeoneTyping] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,6 +48,40 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Simulate real-time messages and typing indicators
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() < 0.1) {
+        // Show typing indicator first
+        setSomeoneTyping(true);
+        
+        setTimeout(() => {
+          setSomeoneTyping(false);
+          const responses = [
+            "Hey everyone! 👋",
+            "Anyone want to play a game?",
+            "Good luck in your matches!",
+            "This chat is awesome! 🎮",
+            "Just finished an epic game!",
+            "Looking for teammates 🎯"
+          ];
+          const message: Message = {
+            id: Math.random().toString(),
+            user_id: `player_${Math.floor(Math.random() * 1000)}`,
+            username: `Player${Math.floor(Math.random() * 1000)}`,
+            content: responses[Math.floor(Math.random() * responses.length)],
+            created_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+          };
+          
+          setMessages(prev => [...prev, message]);
+        }, 1500 + Math.random() * 2000);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,6 +341,25 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
                 </div>
               </div>
             ))
+          )}
+          
+          {/* Typing indicator */}
+          {someoneTyping && (
+            <div className="flex gap-3 animate-pulse">
+              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                <span className="text-xs">💬</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  </div>
+                  <span>Someone is typing...</span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </ScrollArea>
