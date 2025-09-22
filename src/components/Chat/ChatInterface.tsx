@@ -6,9 +6,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Send, Users, Clock, Smile, Mic, MicOff, Paperclip, Image } from "lucide-react";
+import { Send, Users, Clock, Smile, Mic, MicOff, Paperclip, Image, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
   id: string;
@@ -39,8 +40,26 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [someoneTyping, setSomeoneTyping] = useState(false);
+  const [showLandscapeHint, setShowLandscapeHint] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
+
+  // Show landscape hint for mobile users
+  useEffect(() => {
+    if (isMobile && window.innerHeight > window.innerWidth) {
+      setShowLandscapeHint(true);
+      const timer = setTimeout(() => {
+        toast({
+          title: "Better chat experience",
+          description: "📱 Rotate to landscape mode for optimal chat viewing",
+          duration: 4000,
+        });
+        setShowLandscapeHint(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
