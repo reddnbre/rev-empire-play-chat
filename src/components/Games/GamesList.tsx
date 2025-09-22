@@ -181,16 +181,16 @@ const GamesList = ({ onStartGame }: GamesListProps) => {
   }));
 
   return (
-    <div className="w-full">
+    <div className="w-full px-2">
       <h3 className="text-sm font-semibold mb-3 text-center">Multiplayer Games</h3>
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-1.5">
         {gameNames.map((game) => (
           <Button
             key={game.id}
             variant="outline"
             size="sm"
             onClick={() => onStartGame(game.id)}
-            className="text-xs px-3 py-2 h-7 min-w-0 flex-shrink-0 hover:bg-primary hover:text-primary-foreground transition-colors"
+            className="text-xs px-1.5 py-1 h-6 w-full min-w-0 hover:bg-primary hover:text-primary-foreground transition-colors truncate"
             title={games.find(g => g.id === game.id)?.name} // Show full name on hover
           >
             {game.name}
