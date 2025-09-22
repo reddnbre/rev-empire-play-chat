@@ -16,6 +16,14 @@ import GuestNameInput from "@/components/Chat/GuestNameInput";
 
 // Games
 import TicTacToe from "@/components/Games/TicTacToe";
+import Hangman from "@/components/Games/Hangman";
+import ConnectFour from "@/components/Games/ConnectFour";
+import MemoryGame from "@/components/Games/MemoryGame";
+import NumberPuzzle from "@/components/Games/NumberPuzzle";
+import War from "@/components/Games/War";
+import EmojiGuess from "@/components/Games/EmojiGuess";
+import TriviaBot from "@/components/Games/TriviaBot";
+import SimpleGame from "@/components/Games/SimpleGame";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -98,6 +106,32 @@ const Index = () => {
     switch (currentGame) {
       case "tictactoe":
         return <TicTacToe onBack={handleBackToMain} />;
+      case "hangman":
+        return <Hangman onBack={handleBackToMain} />;
+      case "connect-four":
+        return <ConnectFour onBack={handleBackToMain} />;
+      case "memory-game":
+        return <MemoryGame onBack={handleBackToMain} />;
+      case "number-puzzle":
+        return <NumberPuzzle onBack={handleBackToMain} />;
+      case "war":
+        return <War onBack={handleBackToMain} />;
+      case "emoji-guess":
+        return <EmojiGuess onBack={handleBackToMain} />;
+      case "trivia-bot":
+        return <TriviaBot onBack={handleBackToMain} />;
+      case "battleship":
+        return <SimpleGame onBack={handleBackToMain} gameName="Battleship" gameDescription="Naval strategy - sink all enemy ships" />;
+      case "checkers":
+        return <SimpleGame onBack={handleBackToMain} gameName="Checkers" gameDescription="Classic board game strategy" />;
+      case "uno-lite":
+        return <SimpleGame onBack={handleBackToMain} gameName="UNO Lite" gameDescription="Fast-paced card matching game" />;
+      case "word-search":
+        return <SimpleGame onBack={handleBackToMain} gameName="Word Search" gameDescription="Find hidden words in the grid" />;
+      case "would-rather":
+        return <SimpleGame onBack={handleBackToMain} gameName="Would You Rather" gameDescription="Choose between two options" />;
+      case "custom-games":
+        return <SimpleGame onBack={handleBackToMain} gameName="Custom Games" gameDescription="Create and play custom games" />;
       default:
         return (
           <Card className="p-8 text-center">
