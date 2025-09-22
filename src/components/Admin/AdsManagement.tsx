@@ -111,8 +111,8 @@ const AdsManagement = () => {
           banner_url: newAd.banner_url || null,
           show_popup: newAd.show_popup,
           priority: newAd.priority,
-          start_date: newAd.start_date ? new Date(newAd.start_date).toISOString() : null,
-          end_date: newAd.end_date ? new Date(newAd.end_date).toISOString() : null,
+           start_date: newAd.start_date ? new Date(newAd.start_date).toISOString() : new Date().toISOString(),
+           end_date: newAd.end_date ? new Date(newAd.end_date).toISOString() : null,
           is_active: true,
           created_by: (await supabase.auth.getUser()).data.user?.id || '00000000-0000-0000-0000-000000000000'
         }]);
@@ -177,8 +177,8 @@ const AdsManagement = () => {
           banner_url: editingAd.banner_url,
           show_popup: editingAd.show_popup,
           priority: editingAd.priority,
-          start_date: editingAd.start_date ? new Date(editingAd.start_date).toISOString() : null,
-          end_date: editingAd.end_date ? new Date(editingAd.end_date).toISOString() : null
+           start_date: editingAd.start_date ? new Date(editingAd.start_date).toISOString() : new Date().toISOString(),
+           end_date: editingAd.end_date ? new Date(editingAd.end_date).toISOString() : null
         })
         .eq('id', editingAd.id);
 
@@ -260,6 +260,48 @@ const AdsManagement = () => {
     }
   };
 
+  const createDemoAd = async () => {
+    try {
+      const { error } = await supabase
+        .from('ads')
+        .insert([{
+          title: "🎮 Welcome to RevEmpire!",
+          content: "Join the ultimate gaming and chat community. Play games, meet friends, and have fun!",
+          detailed_info: "RevEmpire ChatBox is your one-stop destination for casual gaming and social interaction. Featuring multiple classic games, real-time chat, and a friendly community of players from around the world.",
+          ad_type: 'banner',
+          position: 'top',
+          target_url: 'https://github.com/reddnbre/rev-empire-play-chat',
+          banner_image: null,
+          banner_url: null,
+          show_popup: true,
+          priority: 5,
+          start_date: new Date().toISOString(),
+          end_date: null,
+          is_active: true,
+          created_by: (await supabase.auth.getUser()).data.user?.id || '00000000-0000-0000-0000-000000000000'
+        }]);
+
+      if (error) {
+        console.error('Error creating demo ad:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create demo ad",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Demo ad created!",
+        description: "Check the main page to see how it appears to users",
+      });
+
+      fetchAds();
+    } catch (error) {
+      console.error('Error in createDemoAd:', error);
+    }
+  };
+
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString();
@@ -271,6 +313,25 @@ const AdsManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Info Card */}
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+            <div>
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">How Ad Display Works</h4>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                <li>• Ads you create here will be visible to ALL users (including guests)</li>
+                <li>• Start date defaults to "now" - ads are immediately active when created</li>
+                <li>• Leave end date empty for ads that run indefinitely</li>
+                <li>• Toggle ads on/off using the switch without deleting them</li>
+                <li>• Higher priority numbers display first when multiple ads exist</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Header with Create Button */}
       <div className="flex items-center justify-between">
         <div>
@@ -435,10 +496,19 @@ const AdsManagement = () => {
           <Card>
             <CardContent className="text-center py-12">
               <p className="text-muted-foreground mb-4">No ads created yet</p>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Ad
-              </Button>
+              <div className="flex gap-3 justify-center">
+                <Button onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Ad
+                </Button>
+                <Button variant="outline" onClick={createDemoAd}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Add Demo Ad
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Try the demo ad first to see how ads appear to users
+              </p>
             </CardContent>
           </Card>
         ) : (
