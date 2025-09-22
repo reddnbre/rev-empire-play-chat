@@ -16,9 +16,10 @@ interface HeaderProps {
   currentUser: any;
   onShowAdmin: () => void;
   isAdmin?: boolean;
+  guestName?: string;
 }
 
-const Header = ({ currentUser, onShowAdmin, isAdmin = false }: HeaderProps) => {
+const Header = ({ currentUser, onShowAdmin, isAdmin = false, guestName }: HeaderProps) => {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -35,9 +36,15 @@ const Header = ({ currentUser, onShowAdmin, isAdmin = false }: HeaderProps) => {
     }
   };
 
-  const getInitials = (email: string) => {
-    return email ? email.slice(0, 2).toUpperCase() : "U";
+  const getInitials = (text: string) => {
+    return text ? text.slice(0, 2).toUpperCase() : "G";
   };
+
+  const displayName = currentUser 
+    ? (currentUser.email?.split('@')[0] || 'User')
+    : guestName || 'Guest';
+  
+  const displayEmail = currentUser?.email;
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -67,7 +74,7 @@ const Header = ({ currentUser, onShowAdmin, isAdmin = false }: HeaderProps) => {
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">
-                    {getInitials(currentUser?.email || "")}
+                    {getInitials(displayName)}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -76,16 +83,23 @@ const Header = ({ currentUser, onShowAdmin, isAdmin = false }: HeaderProps) => {
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
                   <p className="font-medium text-sm">
-                    {currentUser?.email?.split('@')[0] || 'User'}
+                    {displayName}
                   </p>
-                  <p className="w-[200px] truncate text-xs text-muted-foreground">
-                    {currentUser?.email}
-                  </p>
+                  {displayEmail && (
+                    <p className="w-[200px] truncate text-xs text-muted-foreground">
+                      {displayEmail}
+                    </p>
+                  )}
+                  {!currentUser && (
+                    <p className="text-xs text-muted-foreground">
+                      Guest User
+                    </p>
+                  )}
                 </div>
               </div>
               <DropdownMenuSeparator />
               
-              {isAdmin && (
+              {isAdmin && currentUser && (
                 <>
                   <DropdownMenuItem onClick={onShowAdmin}>
                     <Shield className="mr-2 h-4 w-4" />
@@ -95,15 +109,24 @@ const Header = ({ currentUser, onShowAdmin, isAdmin = false }: HeaderProps) => {
                 </>
               )}
               
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sign out</span>
-              </DropdownMenuItem>
+              {currentUser ? (
+                <>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem onClick={() => window.location.href = '/auth'}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Admin Login</span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

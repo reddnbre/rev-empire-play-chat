@@ -20,9 +20,11 @@ interface Message {
 
 interface ChatInterfaceProps {
   currentUser: any;
+  guestName?: string;
+  onRequestName?: () => void;
 }
 
-const ChatInterface = ({ currentUser }: ChatInterfaceProps) => {
+const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<number>(0);
@@ -39,13 +41,19 @@ const ChatInterface = ({ currentUser }: ChatInterfaceProps) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
+    // If guest user hasn't provided a name yet, request it
+    if (!currentUser && !guestName && onRequestName) {
+      onRequestName();
+      return;
+    }
+
     try {
       // For demo purposes, we'll simulate real-time chat with local state
       // In production, you'd insert into a messages table and use Supabase realtime
       const message: Message = {
         id: Math.random().toString(),
-        user_id: currentUser.id,
-        username: currentUser.email?.split('@')[0] || 'User',
+        user_id: currentUser?.id || 'guest',
+        username: currentUser ? (currentUser.email?.split('@')[0] || 'User') : guestName || 'Guest',
         content: newMessage.trim(),
         created_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours

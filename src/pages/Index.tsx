@@ -12,6 +12,7 @@ import ChatInterface from "@/components/Chat/ChatInterface";
 import GamesList from "@/components/Games/GamesList";
 import AdminPanel from "@/components/Admin/AdminPanel";
 import AdBanner from "@/components/Ads/AdBanner";
+import GuestNameInput from "@/components/Chat/GuestNameInput";
 
 // Games
 import TicTacToe from "@/components/Games/TicTacToe";
@@ -22,7 +23,9 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<"main" | "admin" | "game">("main");
   const [currentGame, setCurrentGame] = useState<string>("");
-  const [isAdmin, setIsAdmin] = useState(true); // Enable admin access for all users
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [showNameInput, setShowNameInput] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,10 +49,10 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
+    if (user) {
+      setIsAdmin(true); // Only authenticated users can be admin
     }
-  }, [user, loading, navigate]);
+  }, [user]);
 
   const handleStartGame = (gameId: string) => {
     setCurrentGame(gameId);
@@ -63,6 +66,19 @@ const Index = () => {
   const handleBackToMain = () => {
     setCurrentView("main");
     setCurrentGame("");
+  };
+
+  const handleAdminAccess = () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    setCurrentView("admin");
+  };
+
+  const handleGuestNameSubmit = (name: string) => {
+    setGuestName(name);
+    setShowNameInput(false);
   };
 
   const renderGameComponent = () => {
@@ -93,16 +109,18 @@ const Index = () => {
     );
   }
 
-  if (!user) {
-    return null; // Will redirect to auth
+  // Show name input for guests on first chat interaction
+  if (showNameInput) {
+    return <GuestNameInput onSubmit={handleGuestNameSubmit} />;
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Header 
         currentUser={user} 
-        onShowAdmin={() => setCurrentView("admin")}
-        isAdmin={isAdmin}
+        onShowAdmin={handleAdminAccess}
+        isAdmin={user ? isAdmin : false}
+        guestName={guestName}
       />
 
       {/* Top Ad Banner */}
@@ -138,7 +156,11 @@ const Index = () => {
 
             {/* Chat Section */}
             <div className="lg:col-span-1">
-              <ChatInterface currentUser={user} />
+              <ChatInterface 
+                currentUser={user} 
+                guestName={guestName}
+                onRequestName={() => setShowNameInput(true)}
+              />
             </div>
 
             {/* Sidebar with Ads */}
