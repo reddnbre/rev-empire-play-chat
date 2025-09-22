@@ -55,7 +55,11 @@ const AdminPanel = () => {
     targetUrl: "",
     position: "top",
     startDate: "",
-    endDate: ""
+    endDate: "",
+    detailedInfo: "",
+    showPopup: false,
+    bannerImage: "",
+    bannerUrl: ""
   });
 
   const handleCreateAd = () => {
@@ -80,7 +84,11 @@ const AdminPanel = () => {
       targetUrl: "",
       position: "top",
       startDate: "",
-      endDate: ""
+      endDate: "",
+      detailedInfo: "",
+      showPopup: false,
+      bannerImage: "",
+      bannerUrl: ""
     });
   };
 
@@ -309,6 +317,51 @@ const AdminPanel = () => {
                     placeholder="https://example.com"
                   />
                 </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="showPopup"
+                    checked={newAd.showPopup}
+                    onCheckedChange={(checked) => setNewAd(prev => ({ ...prev, showPopup: checked }))}
+                  />
+                  <Label htmlFor="showPopup">Show detailed popup on click</Label>
+                </div>
+
+                {newAd.showPopup && (
+                  <>
+                    <div>
+                      <Label htmlFor="detailedInfo">Detailed Information</Label>
+                      <Textarea
+                        id="detailedInfo"
+                        value={newAd.detailedInfo}
+                        onChange={(e) => setNewAd(prev => ({ ...prev, detailedInfo: e.target.value }))}
+                        placeholder="Enter detailed information that will appear in the popup..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="bannerImage">Banner Image URL (468x60)</Label>
+                        <Input
+                          id="bannerImage"
+                          value={newAd.bannerImage}
+                          onChange={(e) => setNewAd(prev => ({ ...prev, bannerImage: e.target.value }))}
+                          placeholder="https://example.com/banner.jpg"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bannerUrl">Banner Click URL</Label>
+                        <Input
+                          id="bannerUrl"
+                          value={newAd.bannerUrl}
+                          onChange={(e) => setNewAd(prev => ({ ...prev, bannerUrl: e.target.value }))}
+                          placeholder="https://example.com"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
