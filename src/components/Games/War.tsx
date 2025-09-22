@@ -33,6 +33,7 @@ const War = ({ onBack }: WarProps) => {
   const [isWar, setIsWar] = useState(false);
   const [cardsAtStake, setCardsAtStake] = useState<CardType[]>([]);
   const [warDepth, setWarDepth] = useState(0);
+  const [lastCardsWon, setLastCardsWon] = useState(0);
 
   useEffect(() => {
     initializeGame();
@@ -77,6 +78,7 @@ const War = ({ onBack }: WarProps) => {
     setIsWar(false);
     setCardsAtStake([]);
     setWarDepth(0);
+    setLastCardsWon(0);
   };
 
   const playRound = () => {
@@ -135,6 +137,7 @@ const War = ({ onBack }: WarProps) => {
         setBotDeck(currentBotDeck);
         setRoundWinner("player");
         setScores(prev => ({ ...prev, player: prev.player + 1 }));
+        setLastCardsWon(currentCardsAtStake.length);
         setIsWar(false);
         setWarDepth(0);
         setCardsAtStake([]);
@@ -150,6 +153,7 @@ const War = ({ onBack }: WarProps) => {
         setPlayerDeck(currentPlayerDeck);
         setRoundWinner("bot");
         setScores(prev => ({ ...prev, bot: prev.bot + 1 }));
+        setLastCardsWon(currentCardsAtStake.length);
         setIsWar(false);
         setWarDepth(0);
         setCardsAtStake([]);
@@ -206,8 +210,8 @@ const War = ({ onBack }: WarProps) => {
 
   const getRoundResult = () => {
     if (!roundWinner) return "";
-    if (roundWinner === "player") return `You won this round and collected ${cardsAtStake.length || 2} cards!`;
-    if (roundWinner === "bot") return `Bot won this round and collected ${cardsAtStake.length || 2} cards!`;
+    if (roundWinner === "player") return `You won this round and collected ${lastCardsWon} cards!`;
+    if (roundWinner === "bot") return `Bot won this round and collected ${lastCardsWon} cards!`;
     if (isWar) {
       return `WAR! ${cardsAtStake.length} cards at stake! Each player draws 4 cards!`;
     }
