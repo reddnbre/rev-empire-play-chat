@@ -258,7 +258,7 @@ const Index = () => {
                 </div>
 
                 {/* Chat Section - Dominant area */}
-                <div className="flex-1 mt-6">
+                <div className="flex-1 mt-8">
                   <ChatInterface 
                     currentUser={user} 
                     guestName={guestName}
