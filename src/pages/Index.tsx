@@ -5,6 +5,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Components
 import Header from "@/components/Layout/Header";
@@ -41,6 +42,7 @@ const Index = () => {
   const [guestName, setGuestName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -223,11 +225,62 @@ const Index = () => {
           )}
 
           {currentView === "main" && (
-            <div className="flex gap-4 min-h-[calc(100vh-200px)]">
-              {/* Left Sidebar */}
-              <div className="w-56 space-y-4 flex-shrink-0">
-                {/* Guest Mode Indicator */}
-                {!user && guestName && (
+            <div className={`${isMobile ? 'space-y-4' : 'flex gap-4'} min-h-[calc(100vh-200px)]`}>
+              {/* Left Sidebar - Hidden on mobile */}
+              {!isMobile && (
+                <div className="w-56 space-y-4 flex-shrink-0">
+                  {/* Guest Mode Indicator */}
+                  {!user && guestName && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-medium">Playing as {guestName}</span>
+                      </div>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Guest mode - your progress won't be saved
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Welcome/Features Section */}
+                  <Card className="p-4">
+                    <h3 className="text-sm font-semibold mb-3">Welcome/Features</h3>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <h4 className="font-medium">🎮 Live Games</h4>
+                        <p className="text-muted-foreground">
+                          Real-time multiplayer with spectating & in-game chat
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">💬 Global Chat</h4>
+                        <p className="text-muted-foreground">
+                          Connect instantly with typing indicators & reactions
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">🤖 Smart Bots</h4>
+                        <p className="text-muted-foreground">
+                          Auto-matched when no players join in time
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Ad Section */}
+                  <Card className="p-4">
+                    <h3 className="text-sm font-semibold mb-3">Ad Section</h3>
+                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                      <AdBanner position="sidebar" className="w-full h-full" />
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Center Content */}
+              <div className="flex-1 space-y-4 min-w-0">
+                {/* Mobile Guest Indicator */}
+                {isMobile && !user && guestName && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -238,50 +291,14 @@ const Index = () => {
                     </p>
                   </div>
                 )}
-                
-                {/* Welcome/Features Section */}
-                <Card className="p-4">
-                  <h3 className="text-sm font-semibold mb-3">Welcome/Features</h3>
-                  <div className="space-y-2 text-xs">
-                    <div>
-                      <h4 className="font-medium">🎮 Live Games</h4>
-                      <p className="text-muted-foreground">
-                        Real-time multiplayer with spectating & in-game chat
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">💬 Global Chat</h4>
-                      <p className="text-muted-foreground">
-                        Connect instantly with typing indicators & reactions
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">🤖 Smart Bots</h4>
-                      <p className="text-muted-foreground">
-                        Auto-matched when no players join in time
-                      </p>
-                    </div>
-                  </div>
-                </Card>
 
-                {/* Ad Section */}
-                <Card className="p-4">
-                  <h3 className="text-sm font-semibold mb-3">Ad Section</h3>
-                  <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-                    <AdBanner position="sidebar" className="w-full h-full" />
-                  </div>
-                </Card>
-              </div>
-
-              {/* Center Content */}
-              <div className="flex-1 space-y-4 min-w-0">
-                {/* Multiplayer/Game Selection - Now compact horizontal tabs */}
-                <div className="h-16 mb-12">
+                {/* Multiplayer/Game Selection - More compact on mobile */}
+                <div className={`${isMobile ? 'h-12 mb-4' : 'h-16 mb-12'}`}>
                   <GamesList onStartGame={handleStartGame} />
                 </div>
 
                 {/* Chat Section - Dominant area */}
-                <div className="flex-1 mt-8">
+                <div className="flex-1">
                   <ChatInterface 
                     currentUser={user} 
                     guestName={guestName}

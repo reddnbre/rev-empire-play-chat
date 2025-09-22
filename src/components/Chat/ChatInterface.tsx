@@ -236,24 +236,26 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
   const popularEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥'];
 
   return (
-    <Card className="h-[540px] flex flex-col">
-      <div className="p-4 border-b">
+    <Card className="h-[540px] md:h-[540px] h-[calc(100vh-200px)] flex flex-col">
+      <div className="p-3 md:p-4 border-b">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Global Chat</h3>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1">
+          <h3 className="text-base md:text-lg font-semibold">Global Chat</h3>
+          <div className="flex items-center gap-1 md:gap-2">
+            <Badge variant="secondary" className="flex items-center gap-1 text-xs">
               <Users className="h-3 w-3" />
-              {onlineUsers || 1}
+              <span className="hidden sm:inline">{onlineUsers || 1}</span>
+              <span className="sm:hidden">{onlineUsers || 1}</span>
             </Badge>
-            <Badge variant="outline" className="flex items-center gap-1">
+            <Badge variant="outline" className="flex items-center gap-1 text-xs">
               <Clock className="h-3 w-3" />
-              8h auto-delete
+              <span className="hidden sm:inline">8h auto-delete</span>
+              <span className="sm:hidden">8h</span>
             </Badge>
           </div>
         </div>
       </div>
 
-      <div className="p-4 h-[420px] overflow-y-auto border-gray-200" ref={scrollAreaRef}>
+      <div className="p-3 md:p-4 flex-1 min-h-0 overflow-y-auto border-gray-200" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-8">
@@ -262,26 +264,26 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
           ) : (
             messages.map((message) => (
               <div key={message.id} className="flex gap-3">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
                   <AvatarFallback className="text-xs">
                     {getInitials(message.username)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 space-y-1">
+                <div className="flex-1 space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{message.username}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm font-medium truncate">{message.username}</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
                       {formatTime(message.created_at)}
                     </span>
                   </div>
-                  <div className="text-sm bg-muted rounded-lg px-3 py-2">
+                  <div className="text-sm bg-muted rounded-lg px-3 py-2 break-words">
                     {message.content}
                     {message.attachment && (
                       <div className="mt-2">
                         <img 
                           src={message.attachment.url} 
                           alt={message.attachment.name}
-                          className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          className="max-w-full w-full sm:max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => window.open(message.attachment?.url, '_blank')}
                         />
                       </div>
@@ -358,14 +360,14 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
         </div>
       </div>
 
-      <form onSubmit={sendMessage} className="p-4 border-t">
-        <div className="flex gap-2">
+      <form onSubmit={sendMessage} className="p-3 md:p-4 border-t flex-shrink-0">
+        <div className="flex gap-1 md:gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0"
+            className="shrink-0 px-2 md:px-3"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -374,7 +376,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type your message..."
-            className="flex-1"
+            className="flex-1 text-sm"
             maxLength={500}
           />
           
@@ -383,12 +385,12 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
             variant="outline"
             size="sm"
             onClick={toggleRecording}
-            className={`shrink-0 ${isRecording ? 'bg-destructive text-destructive-foreground' : ''}`}
+            className={`shrink-0 px-2 md:px-3 ${isRecording ? 'bg-destructive text-destructive-foreground' : ''}`}
           >
             {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
           
-          <Button type="submit" size="sm" disabled={!newMessage.trim()}>
+          <Button type="submit" size="sm" disabled={!newMessage.trim()} className="px-2 md:px-3">
             <Send className="h-4 w-4" />
           </Button>
         </div>
