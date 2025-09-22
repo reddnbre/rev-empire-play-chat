@@ -259,7 +259,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4 h-[280px]" ref={scrollAreaRef}>
+      <div className="flex-1 p-4 h-[280px] overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-8">
@@ -362,7 +362,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <form onSubmit={sendMessage} className="p-4 border-t">
         <div className="flex gap-2">
