@@ -175,17 +175,23 @@ interface GamesListProps {
 }
 
 const GamesList = ({ onStartGame }: GamesListProps) => {
+  const gameNames = games.map(game => ({
+    id: game.id,
+    name: game.name.length > 10 ? game.name.substring(0, 10) + '...' : game.name
+  }));
+
   return (
     <div className="w-full">
-      <h3 className="text-sm font-semibold mb-2 text-center">Multiplayer Games</h3>
-      <div className="grid grid-cols-7 gap-1 px-2">
-        {games.map((game) => (
+      <h3 className="text-sm font-semibold mb-3 text-center">Multiplayer Games</h3>
+      <div className="flex flex-wrap gap-2 justify-center">
+        {gameNames.map((game) => (
           <Button
             key={game.id}
             variant="outline"
             size="sm"
             onClick={() => onStartGame(game.id)}
-            className="text-xs px-2 py-1 h-8 text-center"
+            className="text-xs px-3 py-2 h-7 min-w-0 flex-shrink-0 hover:bg-primary hover:text-primary-foreground transition-colors"
+            title={games.find(g => g.id === game.id)?.name} // Show full name on hover
           >
             {game.name}
           </Button>
