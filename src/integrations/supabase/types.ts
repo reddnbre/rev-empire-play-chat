@@ -17,16 +17,20 @@ export type Database = {
       ads: {
         Row: {
           ad_type: string
+          banner_image: string | null
+          banner_url: string | null
           clicks_count: number | null
           content: string
           created_at: string
           created_by: string
+          detailed_info: string | null
           end_date: string | null
           id: string
           impressions_count: number | null
           is_active: boolean | null
           position: string | null
           priority: number | null
+          show_popup: boolean | null
           start_date: string | null
           target_url: string | null
           title: string
@@ -34,16 +38,20 @@ export type Database = {
         }
         Insert: {
           ad_type: string
+          banner_image?: string | null
+          banner_url?: string | null
           clicks_count?: number | null
           content: string
           created_at?: string
           created_by: string
+          detailed_info?: string | null
           end_date?: string | null
           id?: string
           impressions_count?: number | null
           is_active?: boolean | null
           position?: string | null
           priority?: number | null
+          show_popup?: boolean | null
           start_date?: string | null
           target_url?: string | null
           title: string
@@ -51,16 +59,20 @@ export type Database = {
         }
         Update: {
           ad_type?: string
+          banner_image?: string | null
+          banner_url?: string | null
           clicks_count?: number | null
           content?: string
           created_at?: string
           created_by?: string
+          detailed_info?: string | null
           end_date?: string | null
           id?: string
           impressions_count?: number | null
           is_active?: boolean | null
           position?: string | null
           priority?: number | null
+          show_popup?: boolean | null
           start_date?: string | null
           target_url?: string | null
           title?: string
