@@ -252,14 +252,9 @@ const Index = () => {
 
               {/* Center Content */}
               <div className="flex-1 space-y-4 min-w-0">
-                {/* Multiplayer/Game Selection */}
-                <div className="h-40">
-                  <Card className="p-2 h-full">
-                    <h3 className="text-sm font-semibold mb-2 text-center">Multiplayer/Game Selection</h3>
-                    <div className="h-full">
-                      <GamesList onStartGame={handleStartGame} />
-                    </div>
-                  </Card>
+                {/* Multiplayer/Game Selection - Now compact horizontal tabs */}
+                <div className="h-16">
+                  <GamesList onStartGame={handleStartGame} />
                 </div>
 
                 {/* Chat Section - Dominant area */}

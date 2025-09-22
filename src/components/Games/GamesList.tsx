@@ -175,106 +175,25 @@ interface GamesListProps {
 }
 
 const GamesList = ({ onStartGame }: GamesListProps) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  
-  const categories = ["All", "Strategy", "Action", "Puzzle", "Trivia", "Party"];
-  
-  const filteredGames = selectedCategory === "All" 
-    ? games 
-    : games.filter(game => game.category === selectedCategory);
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Easy": return "bg-green-500/20 text-green-400";
-      case "Medium": return "bg-yellow-500/20 text-yellow-400";
-      case "Hard": return "bg-red-500/20 text-red-400";
-      default: return "bg-gray-500/20 text-gray-400";
-    }
-  };
-
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Gamepad2 className="h-5 w-5" />
-          Multiplayer Games
-        </CardTitle>
-        <CardDescription>
-          Choose from 14 exciting multiplayer games
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="px-6 pb-4">
-          <div className="flex flex-wrap gap-2">
-            {categories.map(category => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </Button>
-            ))}
-          </div>
+    <div className="w-full">
+      <h3 className="text-sm font-semibold mb-2 text-center">Multiplayer Games</h3>
+      <ScrollArea className="w-full">
+        <div className="flex gap-2 px-2">
+          {games.map((game) => (
+            <Button
+              key={game.id}
+              variant="outline"
+              size="sm"
+              onClick={() => onStartGame(game.id)}
+              className="flex-shrink-0 text-xs px-3 py-1 h-8"
+            >
+              {game.name}
+            </Button>
+          ))}
         </div>
-        
-        <ScrollArea className="h-[500px] px-6">
-          <div className="grid gap-4 pb-4">
-            {filteredGames.map((game) => {
-              const IconComponent = game.icon;
-              return (
-                <Card key={game.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <IconComponent className="h-6 w-6 text-primary" />
-                      </div>
-                      
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold">{game.name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {game.description}
-                            </p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            onClick={() => onStartGame(game.id)}
-                            className="shrink-0"
-                          >
-                            <Play className="h-3 w-3 mr-1" />
-                            Play
-                          </Button>
-                        </div>
-                        
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            <Users className="h-3 w-3 mr-1" />
-                            {game.players}
-                          </Badge>
-                          <Badge variant="outline" className={`text-xs ${getDifficultyColor(game.difficulty)}`}>
-                            {game.difficulty}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {game.estimatedTime}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {game.category}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+      </ScrollArea>
+    </div>
   );
 };
 
