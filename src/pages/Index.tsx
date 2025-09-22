@@ -213,14 +213,14 @@ const Index = () => {
           )}
 
           {currentView === "main" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[calc(100vh-200px)]">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[calc(100vh-200px)]">
               {/* Games Section */}
-              <div className="w-full">
+              <div className="w-full md:col-span-1 lg:col-span-1">
                 <GamesList onStartGame={handleStartGame} />
               </div>
 
-              {/* Chat Section */}
-              <div className="w-full">
+              {/* Chat Section - Now dominates the layout */}
+              <div className="w-full md:col-span-2 lg:col-span-3">
                 <ChatInterface 
                   currentUser={user} 
                   guestName={guestName}
@@ -228,27 +228,27 @@ const Index = () => {
                 />
               </div>
 
-              {/* Welcome Info */}
-              <div className="w-full space-y-4 md:col-span-2 lg:col-span-1">
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Welcome to RevEmpire!</h3>
-                  <div className="space-y-4 text-sm">
+              {/* Welcome Info - Compact version */}
+              <div className="w-full md:col-span-3 lg:col-span-1">
+                <Card className="p-4">
+                  <h3 className="text-base font-semibold mb-3">Welcome to RevEmpire ChattyBox</h3>
+                  <div className="space-y-3 text-xs">
                     <div>
-                      <h4 className="font-medium">🎮 14 Multiplayer Games</h4>
+                      <h4 className="font-medium">🎮 Live Games</h4>
                       <p className="text-muted-foreground">
-                        Challenge friends in strategy, puzzle, and party games
+                        Real-time multiplayer with spectating & in-game chat
                       </p>
                     </div>
                     <div>
-                      <h4 className="font-medium">💬 Real-time Chat</h4>
+                      <h4 className="font-medium">💬 Global Chat</h4>
                       <p className="text-muted-foreground">
-                        Connect with players worldwide (8-hour auto-delete)
+                        Connect instantly with typing indicators & reactions
                       </p>
                     </div>
                     <div>
-                      <h4 className="font-medium">🏆 Compete & Win</h4>
+                      <h4 className="font-medium">🤖 Smart Bots</h4>
                       <p className="text-muted-foreground">
-                        Join tournaments and climb the leaderboards
+                        Auto-matched when no players join in time
                       </p>
                     </div>
                   </div>
