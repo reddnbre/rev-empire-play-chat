@@ -1,0 +1,21 @@
+# RevEmpire ChatBox - Ads.txt File
+# This file is used by advertising networks to verify authorized sellers
+# Update this file with your actual publisher IDs and network relationships
+
+# Google AdSense
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+
+# Monetag
+monetag.com, 1234567890, DIRECT
+
+# Media.net
+media.net, 1234567890, DIRECT
+
+# Asterra
+asterra.io, 1234567890, DIRECT
+
+# Add your actual publisher IDs and advertising network relationships here
+# Format: <advertising_system_domain>, <publisher_account_id>, <account_type>, <certification_authority_id>
+
+# Last updated: 2024-01-01
+# Contact: admin@revempire.com
