@@ -82,12 +82,17 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
       console.error('Error tracking click:', error);
     }
 
-    console.log("Ad clicked:", ad.title);
+    console.log("Ad clicked:", ad.title, "Data:", ad);
     
     if (ad.show_popup && ad.detailed_info) {
       setShowDetailPopup(true);
     } else if (ad.target_url && ad.target_url !== "#") {
       window.open(ad.target_url, "_blank");
+    } else {
+      // Fallback: close the popup if no other action is defined
+      if (position === "popup") {
+        setShowPopup(false);
+      }
     }
   };
 
