@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, RotateCcw, Trophy, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import GameResultDialog from "./GameResultDialog";
 
 interface TicTacToeProps {
   onBack: () => void;
@@ -20,6 +21,9 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
   const [winner, setWinner] = useState<Player>(null);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const [gameMode, setGameMode] = useState<"pvp" | "bot">("pvp");
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [gameResult, setGameResult] = useState<"win" | "lose" | "draw">("win");
+  const [resultMessage, setResultMessage] = useState("");
 
   const winningCombinations = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -50,10 +54,16 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
           ...prev, 
           [board[a]!]: prev[board[a] as "X" | "O"] + 1 
         }));
-        toast({
-          title: `Player ${board[a]} wins!`,
-          description: "🎉 Congratulations!",
-        });
+        
+        // Show result dialog
+        if (gameMode === "pvp") {
+          setGameResult("win");
+          setResultMessage(`Player ${board[a]} wins! 🎉`);
+        } else {
+          setGameResult(board[a] === "X" ? "win" : "lose");
+          setResultMessage(board[a] === "X" ? "You won! Great job! 🎉" : "Bot wins! Try again! 🤖");
+        }
+        setShowResultDialog(true);
         return;
       }
     }
@@ -62,10 +72,11 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
       setWinner(null);
       setGameStatus("finished");
       setScores(prev => ({ ...prev, draws: prev.draws + 1 }));
-      toast({
-        title: "It's a draw!",
-        description: "Good game! Try again?",
-      });
+      
+      // Show draw dialog
+      setGameResult("draw");
+      setResultMessage("It's a tie! Good game! 🤝");
+      setShowResultDialog(true);
     }
   };
 
@@ -131,6 +142,7 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
     setCurrentPlayer("X");
     setGameStatus("playing");
     setWinner(null);
+    setShowResultDialog(false);
   };
 
   const resetScores = () => {
@@ -241,6 +253,17 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Game Result Dialog */}
+      <GameResultDialog
+        open={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={gameResult}
+        message={resultMessage}
+        onNewGame={resetGame}
+        onBackToChat={onBack}
+        gameName="TicTacToe"
+      />
     </div>
   );
 };

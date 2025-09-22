@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, RotateCcw, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import GameResultDialog from "./GameResultDialog";
 
 interface WarProps {
   onBack: () => void;
@@ -27,6 +28,8 @@ const War = ({ onBack }: WarProps) => {
   const [scores, setScores] = useState({ player: 0, bot: 0 });
   const [roundWinner, setRoundWinner] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [gameResult, setGameResult] = useState<"win" | "lose">("win");
 
   useEffect(() => {
     initializeGame();
@@ -118,11 +121,8 @@ const War = ({ onBack }: WarProps) => {
   const endGame = (gameWinner: string) => {
     setWinner(gameWinner);
     setGameStatus("finished");
-    
-    toast({
-      title: `${gameWinner === "player" ? "You" : "Bot"} Win!`,
-      description: gameWinner === "player" ? "🎉 Victory!" : "Better luck next time!",
-    });
+    setGameResult(gameWinner === "player" ? "win" : "lose");
+    setShowResultDialog(true);
   };
 
   const resetGame = () => {
@@ -273,6 +273,23 @@ const War = ({ onBack }: WarProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Game Result Dialog */}
+      <GameResultDialog
+        open={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={gameResult}
+        title={gameResult === "win" ? "Victory!" : "Defeat!"}
+        message={gameResult === "win" 
+          ? "You collected all 52 cards! Excellent strategy! 🎉" 
+          : "Bot collected all your cards! Try a different approach next time! 🤖"}
+        onNewGame={() => {
+          resetGame();
+          setShowResultDialog(false);
+        }}
+        onBackToChat={onBack}
+        gameName="War"
+      />
     </div>
   );
 };

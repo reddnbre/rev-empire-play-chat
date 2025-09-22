@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, RotateCcw, Trophy, Users, Brain } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import GameResultDialog from "./GameResultDialog";
 
 interface HangmanProps {
   onBack: () => void;
@@ -24,6 +25,8 @@ const Hangman = ({ onBack }: HangmanProps) => {
   const [gameStatus, setGameStatus] = useState<GameStatus>("playing");
   const [scores, setScores] = useState({ wins: 0, losses: 0 });
   const [gameMode, setGameMode] = useState<"pvp" | "bot">("bot");
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [gameResult, setGameResult] = useState<"win" | "lose">("win");
   
   const maxWrongGuesses = 6;
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -48,18 +51,13 @@ const Hangman = ({ onBack }: HangmanProps) => {
     if (currentWord && wrongGuesses.length >= maxWrongGuesses) {
       setGameStatus("lost");
       setScores(prev => ({ ...prev, losses: prev.losses + 1 }));
-      toast({
-        title: "Game Over!",
-        description: `The word was: ${currentWord}`,
-        variant: "destructive"
-      });
+      setGameResult("lose");
+      setShowResultDialog(true);
     } else if (currentWord && currentWord.split("").every(letter => guessedLetters.includes(letter))) {
       setGameStatus("won");
       setScores(prev => ({ ...prev, wins: prev.wins + 1 }));
-      toast({
-        title: "You Won!",
-        description: "🎉 Congratulations!",
-      });
+      setGameResult("win");
+      setShowResultDialog(true);
     }
   };
 
@@ -98,6 +96,7 @@ const Hangman = ({ onBack }: HangmanProps) => {
   const resetScores = () => {
     setScores({ wins: 0, losses: 0 });
     startNewGame();
+    setShowResultDialog(false);
   };
 
   return (
@@ -208,6 +207,23 @@ const Hangman = ({ onBack }: HangmanProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Game Result Dialog */}
+      <GameResultDialog
+        open={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={gameResult}
+        title={gameResult === "win" ? "Word Guessed!" : "Game Over!"}
+        message={gameResult === "win" 
+          ? `Congratulations! You guessed "${currentWord}" correctly! 🎉` 
+          : `The word was "${currentWord}". Better luck next time! 😔`}
+        onNewGame={() => {
+          startNewGame();
+          setShowResultDialog(false);
+        }}
+        onBackToChat={onBack}
+        gameName="Hangman"
+      />
     </div>
   );
 };

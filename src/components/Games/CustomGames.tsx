@@ -67,7 +67,7 @@ const CustomGames = ({ onBack }: CustomGamesProps) => {
     rules: "",
     category: "Party",
     players: "2-4",
-    difficulty: "Medium" as const
+    difficulty: "Medium" as "Easy" | "Medium" | "Hard"
   });
 
   const handleCreateGame = () => {
@@ -118,7 +118,7 @@ const CustomGames = ({ onBack }: CustomGamesProps) => {
       rules: "",
       category: "Party",
       players: "2-4",
-      difficulty: "Medium"
+      difficulty: "Medium" as "Easy" | "Medium" | "Hard"
     });
     setShowCreateForm(false);
   };
@@ -158,7 +158,7 @@ const CustomGames = ({ onBack }: CustomGamesProps) => {
       rules: template.rules,
       category: template.category,
       players: "2-4",
-      difficulty: "Medium"
+      difficulty: "Medium" as "Easy" | "Medium" | "Hard"
     });
     setShowCreateForm(true);
   };
