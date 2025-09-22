@@ -178,21 +178,19 @@ const GamesList = ({ onStartGame }: GamesListProps) => {
   return (
     <div className="w-full">
       <h3 className="text-sm font-semibold mb-2 text-center">Multiplayer Games</h3>
-      <ScrollArea className="w-full">
-        <div className="flex gap-2 px-2">
-          {games.map((game) => (
-            <Button
-              key={game.id}
-              variant="outline"
-              size="sm"
-              onClick={() => onStartGame(game.id)}
-              className="flex-shrink-0 text-xs px-3 py-1 h-8"
-            >
-              {game.name}
-            </Button>
-          ))}
-        </div>
-      </ScrollArea>
+      <div className="grid grid-cols-7 gap-1 px-2">
+        {games.map((game) => (
+          <Button
+            key={game.id}
+            variant="outline"
+            size="sm"
+            onClick={() => onStartGame(game.id)}
+            className="text-xs px-2 py-1 h-8 text-center"
+          >
+            {game.name}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 };
