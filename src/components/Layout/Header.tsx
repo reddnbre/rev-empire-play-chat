@@ -11,6 +11,7 @@ import {
 import { Crown, Settings, LogOut, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
   currentUser: any;
@@ -62,6 +63,8 @@ const Header = ({ currentUser, onShowAdmin, isAdmin = false, guestName }: Header
         </div>
 
         <div className="flex items-center gap-4">
+          <ThemeToggle />
+          
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-sm text-muted-foreground hidden sm:inline">

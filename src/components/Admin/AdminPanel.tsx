@@ -273,12 +273,26 @@ const AdminPanel = () => {
           <Card>
             <CardHeader>
               <CardTitle>User Management</CardTitle>
-              <CardDescription>Manage registered users and their permissions</CardDescription>
+              <CardDescription>View and manage registered users, permissions, and activity</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-semibold mb-2">What is User Management?</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• <strong>View registered users:</strong> See all users who have signed up</li>
+                  <li>• <strong>Monitor activity:</strong> Track user engagement and chat activity</li>
+                  <li>• <strong>Manage permissions:</strong> Set admin roles and moderation rights</li>
+                  <li>• <strong>Handle reports:</strong> Review and act on user reports</li>
+                  <li>• <strong>Ban/unban users:</strong> Manage problematic users</li>
+                  <li>• <strong>View analytics:</strong> User growth, retention, and engagement metrics</li>
+                </ul>
+              </div>
               <div className="text-center py-8">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">User management features coming soon...</p>
+                <p className="text-muted-foreground">Advanced user management features coming soon...</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Will include user profiles, activity logs, moderation tools, and more
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -332,12 +346,27 @@ const AdminPanel = () => {
           <Card>
             <CardHeader>
               <CardTitle>Game Management</CardTitle>
-              <CardDescription>Configure games and monitor activity</CardDescription>
+              <CardDescription>Configure games, monitor activity, and analyze gaming trends</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-semibold mb-2">What is Game Management?</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• <strong>Game Analytics:</strong> Track which games are most popular</li>
+                  <li>• <strong>Performance Metrics:</strong> Monitor game completion rates and engagement</li>
+                  <li>• <strong>Enable/Disable Games:</strong> Control which games are available to users</li>
+                  <li>• <strong>Game Settings:</strong> Configure difficulty levels and game parameters</li>
+                  <li>• <strong>Leaderboards:</strong> View top players and game statistics</li>
+                  <li>• <strong>Custom Games:</strong> Add new games or modify existing ones</li>
+                  <li>• <strong>Tournament Mode:</strong> Organize competitive gaming events</li>
+                </ul>
+              </div>
               <div className="text-center py-8">
                 <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Game analytics and management coming soon...</p>
+                <p className="text-muted-foreground">Game analytics and advanced management coming soon...</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Will include detailed stats, custom tournaments, and game monetization tools
+                </p>
               </div>
             </CardContent>
           </Card>

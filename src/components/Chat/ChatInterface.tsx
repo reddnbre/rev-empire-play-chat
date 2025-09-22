@@ -5,7 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Users, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Send, Users, Clock, Smile, Mic, MicOff, Paperclip, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -16,6 +17,12 @@ interface Message {
   content: string;
   created_at: string;
   expires_at: string;
+  reactions?: Record<string, string[]>; // emoji -> user_ids
+  attachment?: {
+    type: 'image' | 'gif';
+    url: string;
+    name: string;
+  };
 }
 
 interface ChatInterfaceProps {
@@ -28,7 +35,11 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<number>(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
@@ -86,6 +97,115 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
     return username.slice(0, 2).toUpperCase();
   };
 
+  const toggleRecording = async () => {
+    if (!isRecording) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        setIsRecording(true);
+        toast({
+          title: "Recording started",
+          description: "Speak your message...",
+        });
+        // In a real app, start recording audio here
+      } catch (error) {
+        toast({
+          title: "Microphone access denied",
+          description: "Please allow microphone access to use voice messages",
+          variant: "destructive"
+        });
+      }
+    } else {
+      setIsRecording(false);
+      toast({
+        title: "Recording stopped",
+        description: "Voice message feature coming soon!",
+      });
+    }
+  };
+
+  const addReaction = (messageId: string, emoji: string) => {
+    const userId = currentUser?.id || 'guest';
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const reactions = msg.reactions || {};
+        const currentReactions = reactions[emoji] || [];
+        
+        if (currentReactions.includes(userId)) {
+          // Remove reaction
+          reactions[emoji] = currentReactions.filter(id => id !== userId);
+          if (reactions[emoji].length === 0) {
+            delete reactions[emoji];
+          }
+        } else {
+          // Add reaction
+          reactions[emoji] = [...currentReactions, userId];
+        }
+        
+        return { ...msg, reactions: { ...reactions } };
+      }
+      return msg;
+    }));
+    setShowEmojiPicker(null);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file type (images and GIFs only)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Only images and GIFs are allowed",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create message with attachment
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const message: Message = {
+        id: Math.random().toString(),
+        user_id: currentUser?.id || 'guest',
+        username: currentUser ? (currentUser.email?.split('@')[0] || 'User') : guestName || 'Guest',
+        content: `Shared ${file.type.includes('gif') ? 'a GIF' : 'an image'}`,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+        attachment: {
+          type: file.type.includes('gif') ? 'gif' : 'image',
+          url: e.target?.result as string,
+          name: file.name
+        }
+      };
+
+      setMessages(prev => [...prev, message]);
+      toast({
+        title: "File shared",
+        description: "Your file has been shared in the chat",
+      });
+    };
+    reader.readAsDataURL(file);
+    
+    setShowFileUpload(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const popularEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥'];
+
   return (
     <Card className="h-full flex flex-col">
       <div className="p-4 border-b">
@@ -127,6 +247,61 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
                   </div>
                   <div className="text-sm bg-muted rounded-lg px-3 py-2">
                     {message.content}
+                    {message.attachment && (
+                      <div className="mt-2">
+                        <img 
+                          src={message.attachment.url} 
+                          alt={message.attachment.name}
+                          className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(message.attachment?.url, '_blank')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Reactions */}
+                  {message.reactions && Object.keys(message.reactions).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {Object.entries(message.reactions).map(([emoji, userIds]) => (
+                        <Button
+                          key={emoji}
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => addReaction(message.id, emoji)}
+                        >
+                          {emoji} {userIds.length}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Add reaction button */}
+                  <div className="flex items-center gap-1 mt-1">
+                    <Dialog open={showEmojiPicker === message.id} onOpenChange={(open) => setShowEmojiPicker(open ? message.id : null)}>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                          <Smile className="h-3 w-3" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="w-80">
+                        <DialogHeader>
+                          <DialogTitle>Add Reaction</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid grid-cols-8 gap-2 p-4">
+                          {popularEmojis.map(emoji => (
+                            <Button
+                              key={emoji}
+                              variant="ghost"
+                              className="h-10 w-10 p-0 text-lg hover:bg-muted"
+                              onClick={() => addReaction(message.id, emoji)}
+                            >
+                              {emoji}
+                            </Button>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </div>
@@ -137,6 +312,16 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
 
       <form onSubmit={sendMessage} className="p-4 border-t">
         <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -144,10 +329,29 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
             className="flex-1"
             maxLength={500}
           />
+          
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={toggleRecording}
+            className={`shrink-0 ${isRecording ? 'bg-destructive text-destructive-foreground' : ''}`}
+          >
+            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+          
           <Button type="submit" size="sm" disabled={!newMessage.trim()}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.gif"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
       </form>
     </Card>
   );
