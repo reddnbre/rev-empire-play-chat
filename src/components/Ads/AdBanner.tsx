@@ -17,8 +17,8 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   const sampleAds = [
     {
       id: 1,
-      title: "Premium Gaming Experience",
-      content: "Upgrade to RevEmpire Pro for exclusive games and features!",
+      title: "RevEmpire ChatBox",
+      content: "Connect with players worldwide! 14 multiplayer games and real-time chat - all free!",
       position: "top",
       targetUrl: "#",
       isActive: true
@@ -41,8 +41,8 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
     },
     {
       id: 4,
-      title: "Special Offer!",
-      content: "🎮 Get 50% off Premium membership this week only! Don't miss out!",
+      title: "Play More Games!",
+      content: "🎮 Discover 14 amazing multiplayer games - Strategy, Action, Puzzle & more!",
       position: "popup",
       targetUrl: "#",
       isActive: true
