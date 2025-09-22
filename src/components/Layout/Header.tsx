@@ -122,9 +122,9 @@ const Header = ({ currentUser, onShowAdmin, isAdmin = false, guestName }: Header
                   </DropdownMenuItem>
                 </>
               ) : (
-                <DropdownMenuItem onClick={() => window.location.href = '/auth'}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Admin Login</span>
+                <DropdownMenuItem disabled>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Guest Mode</span>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

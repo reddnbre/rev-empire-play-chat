@@ -45,8 +45,21 @@ const Index = () => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Hidden admin shortcut: Shift+Ctrl+A
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.ctrlKey && e.key === 'A') {
+        e.preventDefault();
+        navigate('/auth');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (user) {
