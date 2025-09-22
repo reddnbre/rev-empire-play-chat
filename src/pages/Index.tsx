@@ -213,26 +213,13 @@ const Index = () => {
           )}
 
           {currentView === "main" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[calc(100vh-200px)]">
-              {/* Games Section */}
-              <div className="w-full md:col-span-1 lg:col-span-1">
-                <GamesList onStartGame={handleStartGame} />
-              </div>
-
-              {/* Chat Section - Now dominates the layout */}
-              <div className="w-full md:col-span-2 lg:col-span-3">
-                <ChatInterface 
-                  currentUser={user} 
-                  guestName={guestName}
-                  onRequestName={() => setShowNameInput(true)}
-                />
-              </div>
-
-              {/* Welcome Info - Compact version */}
-              <div className="w-full md:col-span-3 lg:col-span-1">
+            <div className="flex gap-4 min-h-[calc(100vh-200px)]">
+              {/* Left Sidebar */}
+              <div className="w-56 space-y-4 flex-shrink-0">
+                {/* Welcome/Features Section */}
                 <Card className="p-4">
-                  <h3 className="text-base font-semibold mb-3">Welcome to RevEmpire ChattyBox</h3>
-                  <div className="space-y-3 text-xs">
+                  <h3 className="text-sm font-semibold mb-3">Welcome/Features</h3>
+                  <div className="space-y-2 text-xs">
                     <div>
                       <h4 className="font-medium">🎮 Live Games</h4>
                       <p className="text-muted-foreground">
@@ -253,6 +240,36 @@ const Index = () => {
                     </div>
                   </div>
                 </Card>
+
+                {/* Ad Section */}
+                <Card className="p-4">
+                  <h3 className="text-sm font-semibold mb-3">Ad Section</h3>
+                  <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                    <AdBanner position="sidebar" className="w-full h-full" />
+                  </div>
+                </Card>
+              </div>
+
+              {/* Center Content */}
+              <div className="flex-1 space-y-4 min-w-0">
+                {/* Multiplayer/Game Selection */}
+                <div className="h-40">
+                  <Card className="p-2 h-full">
+                    <h3 className="text-sm font-semibold mb-2 text-center">Multiplayer/Game Selection</h3>
+                    <div className="h-full">
+                      <GamesList onStartGame={handleStartGame} />
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Chat Section - Dominant area */}
+                <div className="flex-1">
+                  <ChatInterface 
+                    currentUser={user} 
+                    guestName={guestName}
+                    onRequestName={() => setShowNameInput(true)}
+                  />
+                </div>
               </div>
             </div>
           )}
