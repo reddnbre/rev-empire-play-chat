@@ -253,7 +253,7 @@ const Index = () => {
               {/* Center Content */}
               <div className="flex-1 space-y-4 min-w-0">
                 {/* Multiplayer/Game Selection - Now compact horizontal tabs */}
-                <div className="h-16">
+                <div className="h-16 mb-12">
                   <GamesList onStartGame={handleStartGame} />
                 </div>
 
