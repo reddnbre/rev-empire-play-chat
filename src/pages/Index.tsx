@@ -22,7 +22,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<"main" | "admin" | "game">("main");
   const [currentGame, setCurrentGame] = useState<string>("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true); // Enable admin access for all users
   const navigate = useNavigate();
 
   useEffect(() => {
