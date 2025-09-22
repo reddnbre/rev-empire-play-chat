@@ -27,7 +27,7 @@ const GuestNameInput = ({ onSubmit }: GuestNameInputProps) => {
             <CardTitle>Join the Chat</CardTitle>
           </div>
           <CardDescription>
-            Enter your display name to start chatting. This name will only be temporary and won't be saved.
+            Choose a display name to join the global chat and start playing games! Your name will be shown to other users and is only temporary for this session.
           </CardDescription>
         </CardHeader>
         <CardContent>

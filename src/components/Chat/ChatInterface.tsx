@@ -87,12 +87,6 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    // If guest user hasn't provided a name yet, request it
-    if (!currentUser && !guestName && onRequestName) {
-      onRequestName();
-      return;
-    }
-
     try {
       // For demo purposes, we'll simulate real-time chat with local state
       // In production, you'd insert into a messages table and use Supabase realtime

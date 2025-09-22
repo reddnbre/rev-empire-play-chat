@@ -49,6 +49,11 @@ const Index = () => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // If user logs out and becomes guest, prompt for name
+        if (!session && !guestName) {
+          setShowNameInput(true);
+        }
       }
     );
 
@@ -57,6 +62,11 @@ const Index = () => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // If no authenticated user and no guest name, prompt for name
+      if (!session && !guestName) {
+        setShowNameInput(true);
+      }
     });
 
     // Hidden admin shortcut: Shift+Ctrl+A
@@ -73,7 +83,7 @@ const Index = () => {
       subscription.unsubscribe();
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [navigate]);
+  }, [navigate, guestName]);
 
   useEffect(() => {
     if (user) {
@@ -216,6 +226,19 @@ const Index = () => {
             <div className="flex gap-4 min-h-[calc(100vh-200px)]">
               {/* Left Sidebar */}
               <div className="w-56 space-y-4 flex-shrink-0">
+                {/* Guest Mode Indicator */}
+                {!user && guestName && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm font-medium">Playing as {guestName}</span>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      Guest mode - your progress won't be saved
+                    </p>
+                  </div>
+                )}
+                
                 {/* Welcome/Features Section */}
                 <Card className="p-4">
                   <h3 className="text-sm font-semibold mb-3">Welcome/Features</h3>
