@@ -23,6 +23,12 @@ import NumberPuzzle from "@/components/Games/NumberPuzzle";
 import War from "@/components/Games/War";
 import EmojiGuess from "@/components/Games/EmojiGuess";
 import TriviaBot from "@/components/Games/TriviaBot";
+import Battleship from "@/components/Games/Battleship";
+import Checkers from "@/components/Games/Checkers";
+import UnoLite from "@/components/Games/UnoLite";
+import WordSearch from "@/components/Games/WordSearch";
+import WouldRather from "@/components/Games/WouldRather";
+import CustomGames from "@/components/Games/CustomGames";
 import SimpleGame from "@/components/Games/SimpleGame";
 
 const Index = () => {
@@ -121,17 +127,17 @@ const Index = () => {
       case "trivia-bot":
         return <TriviaBot onBack={handleBackToMain} />;
       case "battleship":
-        return <SimpleGame onBack={handleBackToMain} gameName="Battleship" gameDescription="Naval strategy - sink all enemy ships" />;
+        return <Battleship onBack={handleBackToMain} />;
       case "checkers":
-        return <SimpleGame onBack={handleBackToMain} gameName="Checkers" gameDescription="Classic board game strategy" />;
+        return <Checkers onBack={handleBackToMain} />;
       case "uno-lite":
-        return <SimpleGame onBack={handleBackToMain} gameName="UNO Lite" gameDescription="Fast-paced card matching game" />;
+        return <UnoLite onBack={handleBackToMain} />;
       case "word-search":
-        return <SimpleGame onBack={handleBackToMain} gameName="Word Search" gameDescription="Find hidden words in the grid" />;
+        return <WordSearch onBack={handleBackToMain} />;
       case "would-rather":
-        return <SimpleGame onBack={handleBackToMain} gameName="Would You Rather" gameDescription="Choose between two options" />;
+        return <WouldRather onBack={handleBackToMain} />;
       case "custom-games":
-        return <SimpleGame onBack={handleBackToMain} gameName="Custom Games" gameDescription="Create and play custom games" />;
+        return <CustomGames onBack={handleBackToMain} />;
       default:
         return (
           <Card className="p-8 text-center">
