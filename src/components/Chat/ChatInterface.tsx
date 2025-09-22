@@ -266,7 +266,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
               <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
             </div>
           ) : (
-            messages.map((message) => (
+            messages.slice(-5).map((message) => (
               <div key={message.id} className="flex gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">
