@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Settings, 
   BarChart3, 
@@ -18,7 +19,8 @@ import {
   Plus,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  Save
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -32,11 +34,20 @@ const AdminPanel = () => {
   });
 
   const [adNetworks, setAdNetworks] = useState([
-    { id: 1, name: "Google AdSense", enabled: true, revenue: 156.30 },
-    { id: 2, name: "Monetag", enabled: true, revenue: 89.40 },
-    { id: 3, name: "Media.net", enabled: false, revenue: 67.20 },
-    { id: 4, name: "Asterra", enabled: true, revenue: 29.60 }
+    { id: 1, name: "Google AdSense", enabled: true, revenue: 156.30, publisherId: "pub-0000000000000000", domain: "google.com" },
+    { id: 2, name: "Monetag", enabled: true, revenue: 89.40, publisherId: "1234567890", domain: "monetag.com" },
+    { id: 3, name: "Media.net", enabled: false, revenue: 67.20, publisherId: "1234567890", domain: "media.net" },
+    { id: 4, name: "Asterra", enabled: true, revenue: 29.60, publisherId: "1234567890", domain: "asterra.io" }
   ]);
+
+  const [newNetwork, setNewNetwork] = useState({
+    name: "",
+    domain: "",
+    publisherId: ""
+  });
+
+  const [adsTxtContent, setAdsTxtContent] = useState("");
+  const [showAdsTxtEditor, setShowAdsTxtEditor] = useState(false);
 
   const [newAd, setNewAd] = useState({
     title: "",
@@ -84,6 +95,65 @@ const AdminPanel = () => {
       description: "Settings saved successfully",
     });
   };
+
+  const addAdNetwork = () => {
+    if (!newNetwork.name || !newNetwork.domain || !newNetwork.publisherId) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all network details",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const network = {
+      id: Date.now(),
+      name: newNetwork.name,
+      domain: newNetwork.domain,
+      publisherId: newNetwork.publisherId,
+      enabled: true,
+      revenue: 0
+    };
+
+    setAdNetworks(prev => [...prev, network]);
+    setNewNetwork({ name: "", domain: "", publisherId: "" });
+    
+    toast({
+      title: "Ad network added",
+      description: "New ad network configured successfully",
+    });
+  };
+
+  const updateNetworkCode = (id: number, publisherId: string) => {
+    setAdNetworks(prev => prev.map(network => 
+      network.id === id 
+        ? { ...network, publisherId }
+        : network
+    ));
+  };
+
+  const loadAdsTxt = async () => {
+    try {
+      const response = await fetch('/ads.txt');
+      const content = await response.text();
+      setAdsTxtContent(content);
+    } catch (error) {
+      setAdsTxtContent("# RevEmpire ChatBox - Ads.txt File\n# Add your ad network configurations here");
+    }
+  };
+
+  const saveAdsTxt = () => {
+    // In a real app, this would make an API call to save the file
+    toast({
+      title: "Ads.txt updated",
+      description: "Your ads.txt file has been saved successfully",
+    });
+    setShowAdsTxtEditor(false);
+  };
+
+  useEffect(() => {
+    loadAdsTxt();
+  }, []);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -271,35 +341,107 @@ const AdminPanel = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Ad Networks Configuration</CardTitle>
-                <CardDescription>Manage your advertising networks</CardDescription>
+                <CardDescription>Manage your advertising networks and publisher codes</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <div className="space-y-4">
                   {adNetworks.map(network => (
-                    <div key={network.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">{network.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Revenue: ${network.revenue}
-                        </p>
+                    <div key={network.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold">{network.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Revenue: ${network.revenue} • {network.domain}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={network.enabled}
+                          onCheckedChange={() => toggleAdNetwork(network.id)}
+                        />
                       </div>
-                      <Switch
-                        checked={network.enabled}
-                        onCheckedChange={() => toggleAdNetwork(network.id)}
-                      />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Label className="text-xs">Publisher ID / Ad Code</Label>
+                          <Input
+                            placeholder="Enter your publisher ID or ad code"
+                            value={network.publisherId}
+                            onChange={(e) => updateNetworkCode(network.id, e.target.value)}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-6 p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-2">Ad.txt File</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Accessible at: <code>/ads.txt</code>
-                  </p>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Ad.txt
-                  </Button>
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Add New Ad Network</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      placeholder="Network Name"
+                      value={newNetwork.name}
+                      onChange={(e) => setNewNetwork(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Domain (e.g. google.com)"
+                      value={newNetwork.domain}
+                      onChange={(e) => setNewNetwork(prev => ({ ...prev, domain: e.target.value }))}
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Publisher ID"
+                        value={newNetwork.publisherId}
+                        onChange={(e) => setNewNetwork(prev => ({ ...prev, publisherId: e.target.value }))}
+                      />
+                      <Button onClick={addAdNetwork} size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold">Ads.txt File</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Accessible at: <code>/ads.txt</code>
+                      </p>
+                    </div>
+                    <Dialog open={showAdsTxtEditor} onOpenChange={setShowAdsTxtEditor}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Ads.txt
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Edit Ads.txt File</DialogTitle>
+                          <DialogDescription>
+                            Configure your ads.txt file for ad network verification
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <Textarea
+                            value={adsTxtContent}
+                            onChange={(e) => setAdsTxtContent(e.target.value)}
+                            className="min-h-[300px] font-mono text-sm"
+                            placeholder="# ads.txt content..."
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setShowAdsTxtEditor(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={saveAdsTxt}>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Changes
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardContent>
             </Card>
