@@ -186,9 +186,9 @@ const Index = () => {
       {/* Main Layout with Side Banners */}
       <div className="flex w-full">
         {/* Left Sidebar Banner */}
-        <div className="hidden lg:block w-40 flex-shrink-0 p-4">
+        <div className="hidden xl:block w-32 flex-shrink-0 p-2">
           <div className="sticky top-4">
-            <AdBanner position="sidebar" className="h-[600px]" />
+            <AdBanner position="sidebar" className="h-[500px]" />
           </div>
         </div>
 
@@ -213,14 +213,14 @@ const Index = () => {
           )}
 
           {currentView === "main" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[calc(100vh-200px)]">
               {/* Games Section */}
-              <div className="lg:col-span-1">
+              <div className="w-full">
                 <GamesList onStartGame={handleStartGame} />
               </div>
 
               {/* Chat Section */}
-              <div className="lg:col-span-1">
+              <div className="w-full">
                 <ChatInterface 
                   currentUser={user} 
                   guestName={guestName}
@@ -229,7 +229,7 @@ const Index = () => {
               </div>
 
               {/* Welcome Info */}
-              <div className="lg:col-span-1 space-y-4">
+              <div className="w-full space-y-4 md:col-span-2 lg:col-span-1">
                 <Card className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Welcome to RevEmpire!</h3>
                   <div className="space-y-4 text-sm">
@@ -259,9 +259,9 @@ const Index = () => {
         </main>
 
         {/* Right Sidebar Banner */}
-        <div className="hidden lg:block w-40 flex-shrink-0 p-4">
+        <div className="hidden xl:block w-32 flex-shrink-0 p-2">
           <div className="sticky top-4">
-            <AdBanner position="sidebar" className="h-[600px]" />
+            <AdBanner position="sidebar" className="h-[500px]" />
           </div>
         </div>
       </div>
