@@ -581,6 +581,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     const animate = () => {
       draw();
       animationId = requestAnimationFrame(animate);
+    };
+    
+    animationId = requestAnimationFrame(animate);
     
     return () => {
       if (animationId) {
