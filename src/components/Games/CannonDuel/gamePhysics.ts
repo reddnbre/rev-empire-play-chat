@@ -19,6 +19,9 @@ export const updateProjectilePhysics = (
 ): Projectile => {
   if (!projectile.active) return projectile;
 
+  // Increment safety frame counter
+  const framesSinceFired = (projectile.framesSinceFired || 0) + 1;
+
   let newVx = projectile.vx + (wind.strength * wind.direction * 0.01);
   let newVy = projectile.vy + GAME_CONSTANTS.GRAVITY;
 
@@ -87,7 +90,8 @@ export const updateProjectilePhysics = (
     y: newY,
     vx: newVx,
     vy: newVy,
-    trail: newTrail
+    trail: newTrail,
+    framesSinceFired
   };
 };
 
@@ -117,8 +121,13 @@ export const checkCollisions = (
     return result;
   }
 
-  // Tank collisions with improved hit detection
+  // Tank collisions with improved hit detection and self-collision prevention
   const checkTankHit = (tank: Tank): boolean => {
+    // Prevent self-collision for first 10 frames
+    if (projectile.ownerId === tank.id && (projectile.framesSinceFired || 0) < 10) {
+      return false;
+    }
+    
     const dx = Math.abs(x - tank.x);
     const dy = Math.abs(y - (tank.y + GAME_CONSTANTS.TANK_SIZE / 2));
     return dx < GAME_CONSTANTS.TANK_SIZE / 2 + GAME_CONSTANTS.PROJECTILE_SIZE &&

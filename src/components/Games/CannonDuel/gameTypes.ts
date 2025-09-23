@@ -22,6 +22,10 @@ export interface Projectile {
   vy: number;
   active: boolean;
   trail: TrailPoint[];
+  ownerId?: 1 | 2; // To prevent self-collision
+  framesSinceFired?: number; // Safety frames
+  damage?: number; // Custom damage
+  explosionType?: 'normal' | 'napalm' | 'cluster';
 }
 
 export interface Explosion {

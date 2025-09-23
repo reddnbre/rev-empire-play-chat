@@ -141,16 +141,14 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
               : obs
           );
           
-          const explosion = createExplosion(obstacleCollision.hitPoint!.x, obstacleCollision.hitPoint!.y, 'normal');
+          const explosion = createExplosion(obstacleCollision.hitPoint!.x, obstacleCollision.hitPoint!.y, newState.projectile.explosionType || 'normal');
           newState.explosions = [...newState.explosions, explosion];
           newState.projectile = { ...updatedProjectile, active: false };
           setTimeout(() => nextTurn(), 800);
           playMove();
         } else if (collision.hitGround || collision.hitTank) {
-          // Determine explosion type based on projectile properties
-          let explosionType: 'normal' | 'napalm' | 'cluster' = 'normal';
-          if ((updatedProjectile as any).napalm) explosionType = 'napalm';
-          else if ((updatedProjectile as any).cluster) explosionType = 'cluster';
+          // Use projectile's explosion type or determine from properties
+          const explosionType = newState.projectile.explosionType || 'normal';
           
           const explosion = createExplosion(collision.impactPoint.x, collision.impactPoint.y, explosionType);
           newState.explosions = [...newState.explosions, explosion];
@@ -214,13 +212,9 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
       const attackerTank = player === 1 ? newState.player2Tank : newState.player1Tank;
       const defenderTank = player === 1 ? newState.player1Tank : newState.player2Tank;
       
-      // Calculate base damage - higher for special projectile types
-      let baseDamage = 25;
-      if ((newState.projectile as any).napalm) baseDamage = 35;
-      if ((newState.projectile as any).cluster) baseDamage = 40;
-      if ((newState.projectile as any).armorPiercing) baseDamage = 30;
-      
-      const { damage, newShield } = calculateDamageWithPowerups(baseDamage, attackerTank.powerups, defenderTank);
+      // Calculate damage using projectile's damage property or fallback
+      const projectileDamage = newState.projectile.damage || 25;
+      const { damage, newShield } = calculateDamageWithPowerups(projectileDamage, attackerTank.powerups, defenderTank);
       
       if (player === 1) {
         const newHp = Math.max(0, newState.player1Tank.hp - damage);
@@ -364,7 +358,11 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         vx: velocity * Math.cos(radians) * direction,
         vy: -velocity * Math.sin(radians),
         active: true,
-        trail: []
+        trail: [],
+        ownerId: prevState.currentPlayer,
+        framesSinceFired: 0,
+        damage: 25,
+        explosionType: 'normal' as const
       };
 
       const projectiles = modifyProjectileWithPowerups(baseProjectile, currentTank, targetTank);

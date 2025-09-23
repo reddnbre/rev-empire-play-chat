@@ -208,6 +208,10 @@ export const modifyProjectileWithPowerups = (
   const projectiles: Projectile[] = [];
   let mainProjectile = { ...projectile };
   
+  // Base damage from projectile or default
+  let damage = projectile.damage || 25;
+  let explosionType = projectile.explosionType || 'normal';
+  
   // Set trail colors and effects based on powerups
   const powerupColors: Record<PowerupType, string> = {
     missile: 'rgba(255, 107, 53',     // Orange
@@ -226,6 +230,7 @@ export const modifyProjectileWithPowerups = (
   for (const powerup of tank.powerups) {
     switch (powerup.type) {
       case 'double_shot':
+        damage *= 0.8; // Slightly reduce individual shot damage
         // Set special color for double shot
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.double_shot }));
         
@@ -234,6 +239,7 @@ export const modifyProjectileWithPowerups = (
           ...mainProjectile,
           vx: mainProjectile.vx * 0.9,
           vy: mainProjectile.vy * 0.9 + 0.5,
+          damage: damage,
           trail: mainProjectile.trail.map(p => ({ ...p, color: powerupColors.double_shot }))
         };
         projectiles.push(secondProjectile);
@@ -242,6 +248,7 @@ export const modifyProjectileWithPowerups = (
       case 'long_shot':
         mainProjectile.vx *= 1.5;
         mainProjectile.vy *= 1.5;
+        damage *= 1.1; // Slightly more damage for longer range
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.long_shot }));
         break;
         
@@ -259,16 +266,21 @@ export const modifyProjectileWithPowerups = (
         
       case 'cluster_bomb':
         (mainProjectile as any).cluster = true;
+        damage *= 0.7; // Individual cluster damage is lower
+        explosionType = 'cluster';
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.cluster_bomb }));
         break;
         
       case 'armor_piercing':
         (mainProjectile as any).armorPiercing = true;
+        damage *= 1.5; // Significantly more damage
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.armor_piercing }));
         break;
         
       case 'napalm':
         (mainProjectile as any).napalm = true;
+        damage *= 1.3; // More damage
+        explosionType = 'napalm';
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.napalm }));
         break;
         
@@ -277,6 +289,10 @@ export const modifyProjectileWithPowerups = (
         break;
     }
   }
+  
+  // Apply final damage and explosion type to main projectile
+  mainProjectile.damage = damage;
+  mainProjectile.explosionType = explosionType;
   
   projectiles.unshift(mainProjectile);
   return projectiles;
