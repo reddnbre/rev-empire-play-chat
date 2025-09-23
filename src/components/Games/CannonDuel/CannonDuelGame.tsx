@@ -130,7 +130,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
           newState.projectile = { ...updatedProjectile, active: false };
           
           if (collision.hitTank) {
-            setTimeout(() => damagePlayer(collision.hitTank!.id as 1 | 2), 200);
+            setTimeout(() => handleDamagePlayer(collision.hitTank!.id as 1 | 2), 200);
           } else {
             setTimeout(() => nextTurn(), 800);
           }
@@ -174,7 +174,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
     });
   }, []);
 
-  const damagePlayer = useCallback((player: 1 | 2) => {
+  const handleDamagePlayer = useCallback((player: 1 | 2) => {
     setGameState(prevState => {
       const newState = { ...prevState };
       const attackerTank = player === 1 ? newState.player2Tank : newState.player1Tank;
