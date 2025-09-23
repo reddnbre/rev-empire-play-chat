@@ -40,7 +40,7 @@ interface CannonDuelGameProps {
 
 export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialGameMode = 'pvp' }) => {
   const animationRef = useRef<number>();
-  const botRef = useRef<BotAI>(createBotAI('medium'));
+  const botRef = useRef<BotAI>(createBotAI());
   const { 
     playMove, 
     playWin, 
@@ -211,8 +211,20 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
           newState.projectile = { ...updatedProjectile, active: false };
           
           if (collision.hitTank) {
+            // Bot learning - record hit
+            if (newState.currentPlayer === 2) {
+              const distance = Math.abs(newState.player2Tank.x - newState.player1Tank.x);
+              botRef.current.recordShotResult(distance, newState.angle, 'hit');
+            }
             setTimeout(() => handleDamagePlayer(collision.hitTank!.id as 1 | 2), 200);
           } else {
+            // Bot learning - record miss or close
+            if (newState.currentPlayer === 2) {
+              const distance = Math.abs(newState.player2Tank.x - newState.player1Tank.x);
+              const hitDistance = Math.abs(collision.impactPoint.x - (collision.hitTank ? collision.hitTank.x : newState.player1Tank.x));
+              const result = hitDistance < 50 ? 'close' : 'miss';
+              botRef.current.recordShotResult(distance, newState.angle, result);
+            }
             setTimeout(() => nextTurn(), 800);
           }
           
@@ -340,7 +352,8 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         prevState.player2Tank,
         prevState.player1Tank,
         prevState.wind,
-        prevState.powerups
+        prevState.powerups,
+        prevState.obstacles
       );
       
       console.log('Bot AI Decision:', {
@@ -348,9 +361,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         power: botDecision.power.toFixed(1),
         shouldMove: botDecision.shouldMove,
         thinkingTime: botDecision.thinkingTime,
-        difficulty: prevState.botDifficulty,
-        windStrength: prevState.wind.strength.toFixed(2),
-        windDirection: prevState.wind.direction > 0 ? 'right' : 'left'
+        strategicReason: botDecision.strategicReason
       });
 
       // Handle bot movement
@@ -535,8 +546,8 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
   }, []);
 
   const handleBotDifficultyChange = useCallback((difficulty: BotDifficulty) => {
-    setGameState(prevState => ({ ...prevState, botDifficulty: difficulty }));
-    botRef.current.setDifficulty(difficulty);
+    // Bot is now always strategic - no difficulty levels
+    setGameState(prevState => ({ ...prevState, botDifficulty: 'hard' }));
   }, []);
 
   const handleAngleChange = useCallback((angle: number[]) => {

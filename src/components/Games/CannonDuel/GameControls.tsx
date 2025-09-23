@@ -105,16 +105,9 @@ export const GameControls: React.FC<GameControlsProps> = ({
           </div>
 
           {gameState.gameMode === 'bot' && (
-            <Select value={gameState.botDifficulty} onValueChange={onBotDifficultyChange}>
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="easy">Easy</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="hard">Hard</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="text-xs px-2 py-1 bg-red-500/10 text-red-400 rounded border border-red-500/20">
+              Strategic AI
+            </div>
           )}
         </div>
       </div>
@@ -286,10 +279,10 @@ export const GameControls: React.FC<GameControlsProps> = ({
             <div className="text-center py-8">
               <div className="text-lg font-medium flex items-center justify-center gap-2">
                 <Bot className="w-5 h-5" />
-                Bot is calculating...
+                Strategic AI Computing...
               </div>
               <div className="text-sm text-muted-foreground">
-                Analyzing trajectory ({gameState.botDifficulty} difficulty)
+                Analyzing battlefield and calculating optimal strategy
               </div>
               <div className="mt-4">
                 <div className="inline-flex items-center gap-2">
