@@ -57,15 +57,17 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
   const [showResult, setShowResult] = useState(false);
   const [winner, setWinner] = useState<1 | 2 | null>(null);
 
+  const [player2Joined, setPlayer2Joined] = useState(false);
+  
   const [player1Tank, setPlayer1Tank] = useState<Tank>({
-    x: 100,
+    x: 80,
     y: GROUND_Y - TANK_SIZE,
     hp: 100,
     maxHp: 100
   });
 
   const [player2Tank, setPlayer2Tank] = useState<Tank>({
-    x: CANVAS_WIDTH - 100,
+    x: CANVAS_WIDTH - 80,
     y: GROUND_Y - TANK_SIZE,
     hp: 100,
     maxHp: 100
@@ -110,11 +112,12 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     ctx.lineWidth = 2;
     ctx.strokeRect(centerX - TANK_SIZE/2, tank.y, TANK_SIZE, TANK_SIZE);
     
-    // Cannon
+    // Cannon - rotate with aim angle
     const cannonLength = 30;
-    const cannonAngle = isPlayer1 ? 0 : Math.PI;
+    const aimRadians = (angle[0] * Math.PI) / 180;
+    const cannonAngle = isPlayer1 ? -aimRadians : Math.PI + aimRadians;
     const cannonX = centerX + Math.cos(cannonAngle) * cannonLength;
-    const cannonY = centerY;
+    const cannonY = centerY + Math.sin(cannonAngle) * cannonLength;
     
     ctx.strokeStyle = isPlayer1 ? '#1E3A8A' : '#991B1B';
     ctx.lineWidth = 6;
@@ -469,13 +472,13 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     if (currentPlayer === 1) {
       setPlayer1Tank(prev => ({
         ...prev,
-        x: Math.max(50, Math.min(CANVAS_WIDTH/2 - 50, 
+        x: Math.max(50, Math.min(CANVAS_WIDTH/2 - 100, 
           prev.x + (direction === 'left' ? -moveAmount : moveAmount)))
       }));
     } else {
       setPlayer2Tank(prev => ({
         ...prev,
-        x: Math.max(CANVAS_WIDTH/2 + 50, Math.min(CANVAS_WIDTH - 50, 
+        x: Math.max(CANVAS_WIDTH/2 + 100, Math.min(CANVAS_WIDTH - 50, 
           prev.x + (direction === 'left' ? -moveAmount : moveAmount)))
       }));
     }
@@ -493,9 +496,14 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     const velocity = power[0] / 8;
     const direction = currentPlayer === 1 ? 1 : -1;
     
+    // Spawn projectile at barrel tip to avoid self-collision
+    const barrelOffset = 25;
+    const spawnX = currentTank.x + Math.cos(radians) * barrelOffset * direction;
+    const spawnY = currentTank.y + TANK_SIZE/2 - Math.sin(radians) * barrelOffset;
+    
     setProjectile({
-      x: currentTank.x,
-      y: currentTank.y + TANK_SIZE/2,
+      x: spawnX,
+      y: spawnY,
       vx: velocity * Math.cos(radians) * direction,
       vy: -velocity * Math.sin(radians),
       active: true
@@ -506,8 +514,8 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
   }, [gamePhase, currentPlayer, player1Tank, player2Tank, angle, power, playMove]);
 
   const resetGame = () => {
-    setPlayer1Tank({ x: 100, y: GROUND_Y - TANK_SIZE, hp: 100, maxHp: 100 });
-    setPlayer2Tank({ x: CANVAS_WIDTH - 100, y: GROUND_Y - TANK_SIZE, hp: 100, maxHp: 100 });
+    setPlayer1Tank({ x: 80, y: GROUND_Y - TANK_SIZE, hp: 100, maxHp: 100 });
+    setPlayer2Tank({ x: CANVAS_WIDTH - 80, y: GROUND_Y - TANK_SIZE, hp: 100, maxHp: 100 });
     setCurrentPlayer(1);
     setGamePhase('move');
     setProjectile({ x: 0, y: 0, vx: 0, vy: 0, active: false });
@@ -516,7 +524,26 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     setShowResult(false);
     setAngle([45]);
     setPower([50]);
+    setPlayer2Joined(false);
   };
+
+  // Auto-switch to bot mode after 60 seconds in PvP
+  useEffect(() => {
+    if (gameMode === 'pvp' && !player2Joined) {
+      const timeout = setTimeout(() => {
+        setGameMode('bot');
+      }, 60000); // 60 seconds
+
+      return () => clearTimeout(timeout);
+    }
+  }, [gameMode, player2Joined]);
+
+  // Simulate player 2 joining (you can replace this with real multiplayer logic)
+  useEffect(() => {
+    if (gameMode === 'pvp' && currentPlayer === 2 && !player2Joined) {
+      setPlayer2Joined(true);
+    }
+  }, [currentPlayer, gameMode, player2Joined]);
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(gameLoop);
