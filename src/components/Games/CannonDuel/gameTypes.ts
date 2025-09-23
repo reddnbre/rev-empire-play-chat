@@ -4,6 +4,8 @@ export interface Tank {
   hp: number;
   maxHp: number;
   id: 1 | 2;
+  shield?: number;
+  powerups: PowerupEffect[];
 }
 
 export interface Projectile {
@@ -35,9 +37,41 @@ export interface Particle {
 }
 
 export interface WindEffect {
-  strength: number;
-  direction: number;
+  strength: number; // 0-1
+  direction: number; // -1 to 1 (left to right)
   particles: WindParticle[];
+}
+
+export type PowerupType = 
+  | 'missile' 
+  | 'shield' 
+  | 'double_shot' 
+  | 'napalm' 
+  | 'long_shot' 
+  | 'repair_kit'
+  | 'bounce_shot'
+  | 'cluster_bomb'
+  | 'laser_sight'
+  | 'armor_piercing';
+
+export interface Powerup {
+  id: string;
+  type: PowerupType;
+  x: number;
+  y: number;
+  active: boolean;
+  collected: boolean;
+  timer: number;
+  maxTimer: number;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface PowerupEffect {
+  type: PowerupType;
+  duration: number;
+  remaining: number;
 }
 
 export interface WindParticle {
@@ -68,6 +102,8 @@ export interface GameState {
   winner: 1 | 2 | null;
   player2Joined: boolean;
   roundCount: number;
+  powerups: Powerup[];
+  activePowerup: PowerupType | null;
 }
 
 export interface GameConstants {

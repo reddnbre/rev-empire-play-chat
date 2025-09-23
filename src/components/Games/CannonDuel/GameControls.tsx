@@ -118,45 +118,73 @@ export const GameControls: React.FC<GameControlsProps> = ({
         </div>
       </div>
 
-      {/* Game Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <Badge variant={gameState.currentPlayer === 1 ? 'default' : 'secondary'} className="mb-2">
-              Player 1 {gameState.currentPlayer === 1 ? '(Active)' : ''}
-            </Badge>
-            <div className="text-2xl font-bold text-blue-700">{gameState.player1Tank.hp}</div>
-            <div className="text-sm text-blue-600">HP Remaining</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Target className="w-5 h-5" />
-              <h3 className="font-bold">Cannon Duel</h3>
-            </div>
-            <div className="text-lg font-semibold">{getPhaseDescription()}</div>
-            <div className="text-sm text-muted-foreground">Round {gameState.roundCount}</div>
-            
-            {/* Wind Indicator */}
-            <div className="mt-2 flex items-center justify-center gap-2 text-sm">
-              <Wind className="w-4 h-4" />
-              <span>{windStrengthText()} wind {windDirectionText()}</span>
+      {/* Game Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <Card className="bg-slate-800/50 border-slate-600">
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">{gameState.player1Tank.hp}</div>
+              <div className="text-xs text-slate-400 mb-1">Player 1 HP</div>
+              {gameState.player1Tank.shield && (
+                <div className="flex items-center justify-center gap-1 text-xs text-blue-300">
+                  <Shield className="w-3 h-3" />
+                  {gameState.player1Tank.shield}
+                </div>
+              )}
+              {gameState.player1Tank.powerups.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1 justify-center">
+                  {gameState.player1Tank.powerups.map((powerup, i) => (
+                    <div key={i} className="text-xs bg-blue-600/20 px-1 rounded">
+                      {powerup.type.replace('_', ' ')} ({powerup.remaining})
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-4 text-center">
-            <Badge variant={gameState.currentPlayer === 2 ? 'default' : 'secondary'} className="mb-2">
-              {gameState.gameMode === 'bot' ? 'Bot' : 'Player 2'} {gameState.currentPlayer === 2 ? '(Active)' : ''}
-            </Badge>
-            <div className="text-2xl font-bold text-red-700">{gameState.player2Tank.hp}</div>
-            <div className="text-sm text-red-600">HP Remaining</div>
+        <Card className="bg-slate-800/50 border-slate-600">
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-400">{gameState.player2Tank.hp}</div>
+              <div className="text-xs text-slate-400 mb-1">{gameState.gameMode === 'bot' ? 'Bot' : 'Player 2'} HP</div>
+              {gameState.player2Tank.shield && (
+                <div className="flex items-center justify-center gap-1 text-xs text-blue-300">
+                  <Shield className="w-3 h-3" />
+                  {gameState.player2Tank.shield}
+                </div>
+              )}
+              {gameState.player2Tank.powerups.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1 justify-center">
+                  {gameState.player2Tank.powerups.map((powerup, i) => (
+                    <div key={i} className="text-xs bg-red-600/20 px-1 rounded">
+                      {powerup.type.replace('_', ' ')} ({powerup.remaining})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Active Powerups Info */}
+      {gameState.powerups.filter(p => p.active && !p.collected).length > 0 && (
+        <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30 mb-4">
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-sm font-semibold text-yellow-400 mb-2">Active Powerups on Field</div>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {gameState.powerups.filter(p => p.active && !p.collected).map(powerup => (
+                  <div key={powerup.id} className="bg-yellow-500/20 px-2 py-1 rounded text-xs">
+                    {POWERUP_CONFIGS[powerup.type].icon} {powerup.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Controls */}
       <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300">

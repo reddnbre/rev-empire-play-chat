@@ -20,6 +20,15 @@ import {
   updateExplosion, 
   generateWind 
 } from './gamePhysics';
+import { 
+  spawnRandomPowerups, 
+  updatePowerups, 
+  checkPowerupCollision, 
+  applyPowerupEffect,
+  updateTankPowerups,
+  modifyProjectileWithPowerups,
+  calculateDamageWithPowerups
+} from './powerupSystem';
 
 interface CannonDuelGameProps {
   onBack: () => void;
@@ -41,14 +50,16 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
       y: GAME_CONSTANTS.GROUND_Y - GAME_CONSTANTS.TANK_SIZE,
       hp: 100,
       maxHp: 100,
-      id: 1
+      id: 1,
+      powerups: []
     },
     player2Tank: {
       x: GAME_CONSTANTS.CANVAS_WIDTH - 80,
       y: GAME_CONSTANTS.GROUND_Y - GAME_CONSTANTS.TANK_SIZE,
       hp: 100,
       maxHp: 100,
-      id: 2
+      id: 2,
+      powerups: []
     },
     projectile: {
       x: 0,
@@ -64,13 +75,41 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
     power: 50,
     winner: null,
     player2Joined: false,
-    roundCount: 1
+    roundCount: 1,
+    powerups: [],
+    activePowerup: null
   });
 
   // Game loop
   const gameLoop = useCallback(() => {
     setGameState(prevState => {
       let newState = { ...prevState };
+
+      // Update powerups
+      newState.powerups = spawnRandomPowerups(newState.powerups);
+      newState.powerups = updatePowerups(newState.powerups);
+
+      // Check powerup collisions
+      const p1Collision = checkPowerupCollision(newState.player1Tank, newState.powerups);
+      const p2Collision = checkPowerupCollision(newState.player2Tank, newState.powerups);
+      
+      if (p1Collision) {
+        newState.player1Tank = applyPowerupEffect(newState.player1Tank, p1Collision);
+        newState.powerups = newState.powerups.map(p => 
+          p.id === p1Collision.id ? { ...p, collected: true, active: false } : p
+        );
+      }
+      
+      if (p2Collision) {
+        newState.player2Tank = applyPowerupEffect(newState.player2Tank, p2Collision);
+        newState.powerups = newState.powerups.map(p => 
+          p.id === p2Collision.id ? { ...p, collected: true, active: false } : p
+        );
+      }
+
+      // Update tank powerups
+      newState.player1Tank = updateTankPowerups(newState.player1Tank);
+      newState.player2Tank = updateTankPowerups(newState.player2Tank);
 
       // Update projectile
       if (newState.projectile.active) {
@@ -114,10 +153,9 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
   }, [playMove]);
 
   const damagePlayer = useCallback((player: 1 | 2) => {
-    const damage = 25;
-    
     setGameState(prevState => {
       const newState = { ...prevState };
+      const damage = 25;
       
       if (player === 1) {
         const newHp = Math.max(0, newState.player1Tank.hp - damage);
@@ -149,7 +187,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
       
       return newState;
     });
-  }, [playWin, playLose]);
+  }, [nextTurn, playWin, playLose]);
 
   const nextTurn = useCallback(() => {
     setGameState(prevState => {
@@ -159,11 +197,10 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
         gamePhase: 'move' as const,
         angle: 45,
         power: 50,
-        wind: generateWind(), // New wind each turn
+        wind: generateWind(),
         roundCount: prevState.currentPlayer === 2 ? prevState.roundCount + 1 : prevState.roundCount
       };
       
-      // Bot turn
       if (newState.gameMode === 'bot' && newState.currentPlayer === 2) {
         setTimeout(() => {
           botTurn();
@@ -174,24 +211,105 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
     });
   }, []);
 
+  const damagePlayer = useCallback((player: 1 | 2) => {
+    setGameState(prevState => {
+      const newState = { ...prevState };
+      const attackerTank = player === 1 ? newState.player2Tank : newState.player1Tank;
+      const defenderTank = player === 1 ? newState.player1Tank : newState.player2Tank;
+      
+      const { damage, newShield } = calculateDamageWithPowerups(25, attackerTank.powerups, defenderTank);
+      
+      if (player === 1) {
+        const newHp = Math.max(0, newState.player1Tank.hp - damage);
+        newState.player1Tank = { 
+          ...newState.player1Tank, 
+          hp: newHp,
+          shield: newShield
+        };
+        
+        if (newHp <= 0) {
+          setTimeout(() => {
+            setGameState(state => ({ ...state, winner: 2, gamePhase: 'finished' }));
+            setShowResult(true);
+            playLose();
+          }, 500);
+        } else {
+          setTimeout(() => nextTurn(), 1000);
+        }
+      } else {
+        const newHp = Math.max(0, newState.player2Tank.hp - damage);
+        newState.player2Tank = { 
+          ...newState.player2Tank, 
+          hp: newHp,
+          shield: newShield
+        };
+        
+        if (newHp <= 0) {
+          setTimeout(() => {
+            setGameState(state => ({ ...state, winner: 1, gamePhase: 'finished' }));
+            setShowResult(true);
+            playWin();
+          }, 500);
+        } else {
+          setTimeout(() => nextTurn(), 1000);
+        }
+      }
+      
+      return newState;
+    });
+  }, [nextTurn, playWin, playLose]);
+
   const botTurn = useCallback(() => {
-    const { angle, power, thinkingTime } = botRef.current.calculateShot(
-      gameState.player2Tank,
-      gameState.player1Tank,
-      gameState.wind
-    );
+    setGameState(prevState => {
+      const { angle, power, thinkingTime } = botRef.current.calculateShot(
+        prevState.player2Tank,
+        prevState.player1Tank,
+        prevState.wind
+      );
 
-    setGameState(prevState => ({
-      ...prevState,
-      angle,
-      power,
-      gamePhase: 'aim'
-    }));
+      const newState = {
+        ...prevState,
+        angle,
+        power,
+        gamePhase: 'aim' as const
+      };
 
-    setTimeout(() => {
-      fire();
-    }, thinkingTime);
-  }, [gameState.player2Tank, gameState.player1Tank, gameState.wind]);
+      setTimeout(() => {
+        setGameState(currentState => {
+          const currentTank = currentState.currentPlayer === 1 ? currentState.player1Tank : currentState.player2Tank;
+          const targetTank = currentState.currentPlayer === 1 ? currentState.player2Tank : currentState.player1Tank;
+          const radians = (currentState.angle * Math.PI) / 180;
+          const velocity = currentState.power / 8;
+          const direction = currentState.currentPlayer === 1 ? 1 : -1;
+          
+          const barrelOffset = 25;
+          const spawnX = currentTank.x + Math.cos(radians) * barrelOffset * direction;
+          const spawnY = currentTank.y + GAME_CONSTANTS.TANK_SIZE / 2 - Math.sin(radians) * barrelOffset;
+          
+          const baseProjectile = {
+            x: spawnX,
+            y: spawnY,
+            vx: velocity * Math.cos(radians) * direction,
+            vy: -velocity * Math.sin(radians),
+            active: true,
+            trail: []
+          };
+
+          const projectiles = modifyProjectileWithPowerups(baseProjectile, currentTank, targetTank);
+          
+          playMove();
+          
+          return {
+            ...currentState,
+            projectile: projectiles[0], // Use main projectile for now
+            gamePhase: 'firing' as const
+          };
+        });
+      }, thinkingTime);
+
+      return newState;
+    });
+  }, [playMove]);
 
   const moveTank = useCallback((direction: 'left' | 'right') => {
     if (gameState.gamePhase !== 'move') return;
@@ -223,53 +341,62 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
   }, []);
 
   const fire = useCallback(() => {
-    if (gameState.gamePhase !== 'aim') return;
-    
-    const currentTank = gameState.currentPlayer === 1 ? gameState.player1Tank : gameState.player2Tank;
-    const radians = (gameState.angle * Math.PI) / 180;
-    const velocity = gameState.power / 8;
-    const direction = gameState.currentPlayer === 1 ? 1 : -1;
-    
-    // Spawn projectile at barrel tip to avoid self-collision
-    const barrelOffset = 25;
-    const spawnX = currentTank.x + Math.cos(radians) * barrelOffset * direction;
-    const spawnY = currentTank.y + GAME_CONSTANTS.TANK_SIZE / 2 - Math.sin(radians) * barrelOffset;
-    
-    setGameState(prevState => ({
-      ...prevState,
-      projectile: {
+    setGameState(prevState => {
+      if (prevState.gamePhase !== 'aim') return prevState;
+      
+      const currentTank = prevState.currentPlayer === 1 ? prevState.player1Tank : prevState.player2Tank;
+      const targetTank = prevState.currentPlayer === 1 ? prevState.player2Tank : prevState.player1Tank;
+      const radians = (prevState.angle * Math.PI) / 180;
+      const velocity = prevState.power / 8;
+      const direction = prevState.currentPlayer === 1 ? 1 : -1;
+      
+      // Spawn projectile at barrel tip to avoid self-collision
+      const barrelOffset = 25;
+      const spawnX = currentTank.x + Math.cos(radians) * barrelOffset * direction;
+      const spawnY = currentTank.y + GAME_CONSTANTS.TANK_SIZE / 2 - Math.sin(radians) * barrelOffset;
+      
+      const baseProjectile = {
         x: spawnX,
         y: spawnY,
         vx: velocity * Math.cos(radians) * direction,
         vy: -velocity * Math.sin(radians),
         active: true,
         trail: []
-      },
-      gamePhase: 'firing'
-    }));
-    
-    playMove();
-  }, [gameState, playMove]);
+      };
+
+      const projectiles = modifyProjectileWithPowerups(baseProjectile, currentTank, targetTank);
+      
+      playMove();
+      
+      return {
+        ...prevState,
+        projectile: projectiles[0], // Use main projectile for now
+        gamePhase: 'firing' as const
+      };
+    });
+  }, [playMove]);
 
   const resetGame = useCallback(() => {
-    setGameState({
+    setGameState(prevState => ({
       currentPlayer: 1,
       gamePhase: 'move',
-      gameMode: gameState.gameMode,
-      botDifficulty: gameState.botDifficulty,
+      gameMode: prevState.gameMode,
+      botDifficulty: prevState.botDifficulty,
       player1Tank: {
         x: 80,
         y: GAME_CONSTANTS.GROUND_Y - GAME_CONSTANTS.TANK_SIZE,
         hp: 100,
         maxHp: 100,
-        id: 1
+        id: 1,
+        powerups: []
       },
       player2Tank: {
         x: GAME_CONSTANTS.CANVAS_WIDTH - 80,
         y: GAME_CONSTANTS.GROUND_Y - GAME_CONSTANTS.TANK_SIZE,
         hp: 100,
         maxHp: 100,
-        id: 2
+        id: 2,
+        powerups: []
       },
       projectile: {
         x: 0,
@@ -285,11 +412,13 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
       power: 50,
       winner: null,
       player2Joined: false,
-      roundCount: 1
-    });
+      roundCount: 1,
+      powerups: [],
+      activePowerup: null
+    }));
     setShowResult(false);
     botRef.current.reset();
-  }, [gameState.gameMode, gameState.botDifficulty]);
+  }, []);
 
   // Game mode handlers
   const handleGameModeChange = useCallback((mode: 'pvp' | 'bot') => {

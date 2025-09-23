@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Tank, Projectile, Explosion, WindEffect, GameState } from './gameTypes';
+import { Tank, Projectile, Explosion, WindEffect, GameState, Powerup } from './gameTypes';
 import { GAME_CONSTANTS, calculateTrajectory } from './gamePhysics';
 
 interface GameCanvasProps {
@@ -166,6 +166,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     ctx.fillStyle = hpGradient;
     ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
 
+    // Shield bar (if tank has shield)
+    if (tank.shield && tank.shield > 0) {
+      const shieldBarY = barY - 15;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(barX - 1, shieldBarY - 1, barWidth + 2, 6);
+      
+      const shieldGradient = ctx.createLinearGradient(barX, shieldBarY, barX + barWidth, shieldBarY);
+      shieldGradient.addColorStop(0, '#3B82F6');
+      shieldGradient.addColorStop(1, '#1D4ED8');
+      ctx.fillStyle = shieldGradient;
+      ctx.fillRect(barX, shieldBarY, Math.min(barWidth, (tank.shield / 50) * barWidth), 4);
+    }
+
     // HP text with outline
     ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'center';
@@ -174,6 +187,42 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     ctx.strokeText(`${tank.hp}`, centerX, barY - 8);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillText(`${tank.hp}`, centerX, barY - 8);
+
+    // Active powerups indicators
+    if (tank.powerups.length > 0) {
+      ctx.font = '16px Arial';
+      tank.powerups.forEach((powerup, index) => {
+        const iconX = centerX - (tank.powerups.length * 10) + (index * 20);
+        const iconY = tank.y - 45;
+        
+        // Draw powerup icon background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(iconX - 8, iconY - 8, 16, 16);
+        
+        // Draw remaining turns indicator
+        ctx.fillStyle = powerup.remaining > 1 ? '#22C55E' : '#F59E0B';
+        ctx.fillRect(iconX - 8, iconY + 6, (powerup.remaining / powerup.duration) * 16, 2);
+        
+        // Draw icon (simplified as colored circle for now)
+        const powerupColors: Record<string, string> = {
+          missile: '#FF6B35',
+          shield: '#3B82F6',
+          double_shot: '#F59E0B',
+          napalm: '#EF4444',
+          long_shot: '#10B981',
+          repair_kit: '#22C55E',
+          bounce_shot: '#8B5CF6',
+          cluster_bomb: '#DC2626',
+          laser_sight: '#EC4899',
+          armor_piercing: '#6B7280'
+        };
+        
+        ctx.fillStyle = powerupColors[powerup.type] || '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
   };
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, projectile: Projectile) => {
@@ -308,11 +357,82 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     ctx.stroke();
   };
 
+  const drawPowerups = (ctx: CanvasRenderingContext2D, powerups: Powerup[]) => {
+    powerups.forEach(powerup => {
+      if (!powerup.active || powerup.collected) return;
+      
+      // Floating animation
+      const floatOffset = Math.sin(Date.now() * 0.003 + powerup.x * 0.01) * 3;
+      const y = powerup.y + floatOffset;
+      
+      // Glow effect
+      const glowGradient = ctx.createRadialGradient(powerup.x, y, 0, powerup.x, y, 25);
+      glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+      glowGradient.addColorStop(0.7, 'rgba(255, 215, 0, 0.3)');
+      glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+      
+      ctx.fillStyle = glowGradient;
+      ctx.beginPath();
+      ctx.arc(powerup.x, y, 25, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Powerup box
+      const boxSize = 20;
+      const boxGradient = ctx.createLinearGradient(
+        powerup.x - boxSize/2, y - boxSize/2, 
+        powerup.x + boxSize/2, y + boxSize/2
+      );
+      boxGradient.addColorStop(0, 'rgba(255, 215, 0, 0.9)');
+      boxGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+      boxGradient.addColorStop(1, 'rgba(255, 165, 0, 0.9)');
+      
+      ctx.fillStyle = boxGradient;
+      ctx.fillRect(powerup.x - boxSize/2, y - boxSize/2, boxSize, boxSize);
+      
+      // Border
+      ctx.strokeStyle = 'rgba(255, 215, 0, 1)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(powerup.x - boxSize/2, y - boxSize/2, boxSize, boxSize);
+      
+      // Icon (simplified colored circle)
+      const powerupColors: Record<string, string> = {
+        missile: '#FF6B35',
+        shield: '#3B82F6',
+        double_shot: '#F59E0B',
+        napalm: '#EF4444',
+        long_shot: '#10B981',
+        repair_kit: '#22C55E',
+        bounce_shot: '#8B5CF6',
+        cluster_bomb: '#DC2626',
+        laser_sight: '#EC4899',
+        armor_piercing: '#6B7280'
+      };
+      
+      ctx.fillStyle = powerupColors[powerup.type] || '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(powerup.x, y, 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Timer indicator
+      const timerPercent = 1 - (powerup.timer / powerup.maxTimer);
+      if (timerPercent < 0.3) {
+        ctx.strokeStyle = '#EF4444';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(powerup.x, y, 12, -Math.PI/2, -Math.PI/2 + (timerPercent * 2 * Math.PI));
+        ctx.stroke();
+      }
+    });
+  };
+
   const drawTrajectoryPreview = (ctx: CanvasRenderingContext2D, gameState: GameState) => {
     if (gameState.gamePhase !== 'aim' || (gameState.gameMode === 'bot' && gameState.currentPlayer === 2)) return;
 
     const currentTank = gameState.currentPlayer === 1 ? gameState.player1Tank : gameState.player2Tank;
     const direction = gameState.currentPlayer === 1 ? 1 : -1;
+    
+    // Check for laser sight powerup
+    const hasLaserSight = currentTank.powerups.some(p => p.type === 'laser_sight');
     
     const barrelOffset = 25;
     const radians = (gameState.angle * Math.PI) / 180;
@@ -322,15 +442,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     const trajectoryPoints = calculateTrajectory(startX, startY, gameState.angle, gameState.power, direction, gameState.wind);
 
     if (trajectoryPoints.length > 0) {
-      // Trajectory line with gradient
+      // Enhanced trajectory for laser sight
+      const trajectoryColor = hasLaserSight ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
       const gradient = ctx.createLinearGradient(startX, startY, trajectoryPoints[trajectoryPoints.length - 1].x, trajectoryPoints[trajectoryPoints.length - 1].y);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-      gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
+      gradient.addColorStop(0, trajectoryColor);
+      gradient.addColorStop(0.5, trajectoryColor.replace('0.8', '0.5'));
+      gradient.addColorStop(1, trajectoryColor.replace('0.8', '0.2'));
 
       ctx.strokeStyle = gradient;
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 5]);
+      ctx.lineWidth = hasLaserSight ? 4 : 3;
+      ctx.setLineDash(hasLaserSight ? [5, 2] : [10, 5]);
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       
@@ -343,19 +464,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
 
       // Trajectory dots with glow
       trajectoryPoints.forEach((point, index) => {
-        if (index % 6 === 0) {
+        if (index % (hasLaserSight ? 3 : 6) === 0) {
           const alpha = 1 - (index / trajectoryPoints.length);
+          const dotColor = hasLaserSight ? 'rgba(255, 0, 0' : 'rgba(255, 255, 255';
           const glowGradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 8);
-          glowGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-          glowGradient.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.5})`);
-          glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          glowGradient.addColorStop(0, `${dotColor}, ${alpha})`);
+          glowGradient.addColorStop(0.5, `${dotColor}, ${alpha * 0.5})`);
+          glowGradient.addColorStop(1, `${dotColor}, 0)`);
 
           ctx.fillStyle = glowGradient;
           ctx.beginPath();
           ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.fillStyle = `${dotColor}, ${alpha})`;
           ctx.beginPath();
           ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
           ctx.fill();
@@ -379,6 +501,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     drawTank(ctx, gameState.player2Tank, gameState.currentPlayer === 2 ? gameState.angle : 45);
     drawTrajectoryPreview(ctx, gameState);
     drawProjectile(ctx, gameState.projectile);
+    drawPowerups(ctx, gameState.powerups);
     
     gameState.explosions.forEach(explosion => drawExplosion(ctx, explosion));
   };
