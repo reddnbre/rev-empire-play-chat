@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Target, Zap, Shield, Crosshair, Bot, Users, Wind, Gamepad2 } from 'lucide-react';
 import { GameState, BotDifficulty } from './gameTypes';
+import { POWERUP_CONFIGS } from './powerupSystem';
 
 interface GameControlsProps {
   gameState: GameState;

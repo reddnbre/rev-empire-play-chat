@@ -152,43 +152,6 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
     animationRef.current = requestAnimationFrame(gameLoop);
   }, [playMove]);
 
-  const damagePlayer = useCallback((player: 1 | 2) => {
-    setGameState(prevState => {
-      const newState = { ...prevState };
-      const damage = 25;
-      
-      if (player === 1) {
-        const newHp = Math.max(0, newState.player1Tank.hp - damage);
-        newState.player1Tank = { ...newState.player1Tank, hp: newHp };
-        
-        if (newHp <= 0) {
-          setTimeout(() => {
-            setGameState(state => ({ ...state, winner: 2, gamePhase: 'finished' }));
-            setShowResult(true);
-            playLose();
-          }, 500);
-        } else {
-          setTimeout(() => nextTurn(), 1000);
-        }
-      } else {
-        const newHp = Math.max(0, newState.player2Tank.hp - damage);
-        newState.player2Tank = { ...newState.player2Tank, hp: newHp };
-        
-        if (newHp <= 0) {
-          setTimeout(() => {
-            setGameState(state => ({ ...state, winner: 1, gamePhase: 'finished' }));
-            setShowResult(true);
-            playWin();
-          }, 500);
-        } else {
-          setTimeout(() => nextTurn(), 1000);
-        }
-      }
-      
-      return newState;
-    });
-  }, [nextTurn, playWin, playLose]);
-
   const nextTurn = useCallback(() => {
     setGameState(prevState => {
       const newState = { 
