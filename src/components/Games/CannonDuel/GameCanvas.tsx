@@ -21,16 +21,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.GROUND_Y);
 
-    // Animated stars
+    // Optimized animated stars - reduced count and complexity
     ctx.fillStyle = '#FFFFFF';
-    for (let i = 0; i < 80; i++) {
-      const x = (i * 123 + Date.now() * 0.001) % GAME_CONSTANTS.CANVAS_WIDTH;
+    const time = Date.now() * 0.001;
+    for (let i = 0; i < 30; i++) {
+      const x = (i * 123 + time * 0.5) % GAME_CONSTANTS.CANVAS_WIDTH;
       const y = (i * 456) % (GAME_CONSTANTS.GROUND_Y - 50);
-      const twinkle = Math.sin(Date.now() * 0.003 + i) * 0.5 + 0.5;
-      ctx.globalAlpha = twinkle * 0.8 + 0.2;
-      ctx.beginPath();
-      ctx.arc(x, y, Math.random() * 1.5 + 0.5, 0, Math.PI * 2);
-      ctx.fill();
+      const twinkle = Math.sin(time * 2 + i) * 0.3 + 0.7;
+      ctx.globalAlpha = twinkle;
+      ctx.fillRect(x, y, 1, 1);
     }
     ctx.globalAlpha = 1;
 
@@ -43,11 +42,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     ctx.fillStyle = groundGradient;
     ctx.fillRect(0, GAME_CONSTANTS.GROUND_Y, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT - GAME_CONSTANTS.GROUND_Y);
 
-    // Ground texture and rocks
+    // Optimized ground texture - pre-calculated pattern
     ctx.fillStyle = 'rgba(120, 113, 108, 0.4)';
-    for (let i = 0; i < GAME_CONSTANTS.CANVAS_WIDTH; i += 15) {
-      const height = Math.sin(i * 0.1) * 3 + Math.random() * 8 + 3;
-      ctx.fillRect(i, GAME_CONSTANTS.GROUND_Y, Math.random() * 12 + 8, height);
+    for (let i = 0; i < GAME_CONSTANTS.CANVAS_WIDTH; i += 20) {
+      const height = Math.sin(i * 0.1) * 3 + (i % 13) + 3;
+      ctx.fillRect(i, GAME_CONSTANTS.GROUND_Y, 15, height);
     }
   };
 
@@ -385,7 +384,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
   };
 
   useEffect(() => {
-    draw();
+    let animationId: number;
+    
+    const animate = () => {
+      draw();
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animationId = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
   }, [gameState]);
 
   return (
