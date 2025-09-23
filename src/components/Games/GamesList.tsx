@@ -159,6 +159,16 @@ const games: Game[] = [
     estimatedTime: "5-10 min"
   },
   {
+    id: "cannon-duel",
+    name: "Cannon Duel",
+    description: "Turn-based tank combat with projectile physics",
+    icon: Target,
+    players: "1v1",
+    difficulty: "Medium", 
+    category: "Action",
+    estimatedTime: "5-10 min"
+  },
+  {
     id: "custom-games",
     name: "Custom Games",
     description: "Create and play custom games",

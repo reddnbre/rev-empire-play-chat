@@ -30,6 +30,7 @@ import UnoLite from "@/components/Games/UnoLite";
 import WordSearch from "@/components/Games/WordSearch";
 import WouldRather from "@/components/Games/WouldRather";
 import CustomGames from "@/components/Games/CustomGames";
+import CannonDuel from "@/components/Games/CannonDuel";
 import SimpleGame from "@/components/Games/SimpleGame";
 
 const Index = () => {
@@ -150,6 +151,8 @@ const Index = () => {
         return <WouldRather onBack={handleBackToMain} />;
       case "custom-games":
         return <CustomGames onBack={handleBackToMain} />;
+      case "cannon-duel":
+        return <CannonDuel onBack={handleBackToMain} />;
       default:
         return (
           <Card className="p-8 text-center">
