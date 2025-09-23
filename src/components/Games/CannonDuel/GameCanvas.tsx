@@ -177,6 +177,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
       shieldGradient.addColorStop(1, '#1D4ED8');
       ctx.fillStyle = shieldGradient;
       ctx.fillRect(barX, shieldBarY, Math.min(barWidth, (tank.shield / 50) * barWidth), 4);
+      
+      // Shield glow effect around tank
+      ctx.strokeStyle = '#00BFFF';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(Date.now() * 0.01); // Pulsing effect
+      ctx.strokeRect(tank.x - GAME_CONSTANTS.TANK_SIZE / 2 - 3, tank.y - 3, GAME_CONSTANTS.TANK_SIZE + 6, GAME_CONSTANTS.TANK_SIZE + 6);
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
     }
 
     // HP text with outline
@@ -228,14 +237,21 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
   const drawProjectile = (ctx: CanvasRenderingContext2D, projectile: Projectile) => {
     if (!projectile.active) return;
 
-    // Draw trail
+    // Draw trail with enhanced colors based on projectile type
     projectile.trail.forEach((point, index) => {
       if (point.alpha > 0) {
         const size = (GAME_CONSTANTS.PROJECTILE_SIZE * point.alpha) / 2;
+        
+        // Use custom color if available, otherwise default
+        let baseColor = point.color || 'rgba(255, 107, 53, ';
+        if (baseColor.endsWith(', ')) {
+          baseColor = baseColor.slice(0, -2); // Remove trailing comma and space
+        }
+        
         const trailGradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, size * 2);
-        trailGradient.addColorStop(0, `rgba(255, 107, 53, ${point.alpha * 0.8})`);
-        trailGradient.addColorStop(0.5, `rgba(255, 107, 53, ${point.alpha * 0.4})`);
-        trailGradient.addColorStop(1, `rgba(255, 107, 53, 0)`);
+        trailGradient.addColorStop(0, `${baseColor}, ${point.alpha * 0.8})`);
+        trailGradient.addColorStop(0.5, `${baseColor}, ${point.alpha * 0.4})`);
+        trailGradient.addColorStop(1, `${baseColor}, 0)`);
 
         ctx.fillStyle = trailGradient;
         ctx.beginPath();

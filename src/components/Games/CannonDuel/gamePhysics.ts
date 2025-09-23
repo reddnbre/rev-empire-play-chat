@@ -14,18 +14,64 @@ export const GAME_CONSTANTS = {
 
 export const updateProjectilePhysics = (
   projectile: Projectile,
-  wind: WindEffect
+  wind: WindEffect,
+  targetTank?: Tank
 ): Projectile => {
   if (!projectile.active) return projectile;
 
-  const newX = projectile.x + projectile.vx;
-  const newY = projectile.y + projectile.vy;
-  const newVy = projectile.vy + GAME_CONSTANTS.GRAVITY;
-  const newVx = projectile.vx + (wind.strength * wind.direction * 0.01);
+  let newVx = projectile.vx + (wind.strength * wind.direction * 0.01);
+  let newVy = projectile.vy + GAME_CONSTANTS.GRAVITY;
 
-  // Update trail
+  // Handle homing missiles
+  if ((projectile as any).homing && targetTank) {
+    const dx = targetTank.x - projectile.x;
+    const dy = (targetTank.y + GAME_CONSTANTS.TANK_SIZE / 2) - projectile.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > 0) {
+      const homingStrength = 0.3;
+      newVx += (dx / distance) * homingStrength;
+      newVy += (dy / distance) * homingStrength;
+    }
+  }
+
+  let newX = projectile.x + newVx;
+  let newY = projectile.y + newVy;
+
+  // Handle bouncing projectiles
+  if ((projectile as any).bounces > 0) {
+    let bounced = false;
+    
+    // Ground bounce
+    if (newY >= GAME_CONSTANTS.GROUND_Y) {
+      newY = GAME_CONSTANTS.GROUND_Y;
+      newVy = -newVy * 0.7; // Reduce velocity on bounce
+      (projectile as any).bounces--;
+      bounced = true;
+    }
+    
+    // Wall bounces
+    if (newX <= 0 || newX >= GAME_CONSTANTS.CANVAS_WIDTH) {
+      newVx = -newVx * 0.7;
+      newX = Math.max(0, Math.min(GAME_CONSTANTS.CANVAS_WIDTH, newX));
+      (projectile as any).bounces--;
+      bounced = true;
+    }
+    
+    if (bounced && (projectile as any).bounces <= 0) {
+      (projectile as any).bounces = undefined;
+    }
+  }
+
+  // Update trail with special colors for different projectile types
+  let trailColor = 'rgba(255, 255, 255, ';
+  if ((projectile as any).homing) trailColor = 'rgba(255, 0, 0, ';
+  if ((projectile as any).napalm) trailColor = 'rgba(255, 165, 0, ';
+  if ((projectile as any).cluster) trailColor = 'rgba(255, 255, 0, ';
+  if ((projectile as any).armorPiercing) trailColor = 'rgba(128, 0, 255, ';
+
   const newTrail = [
-    { x: projectile.x, y: projectile.y, alpha: 1.0 },
+    { x: projectile.x, y: projectile.y, alpha: 1.0, color: trailColor },
     ...projectile.trail.slice(0, GAME_CONSTANTS.TRAIL_LENGTH - 1)
   ].map((point, index) => ({
     ...point,
@@ -46,16 +92,26 @@ export const checkCollisions = (
   projectile: Projectile,
   player1Tank: Tank,
   player2Tank: Tank
-): { hitGround: boolean; hitTank: Tank | null; impactPoint: { x: number; y: number } } => {
+): { hitGround: boolean; hitTank: Tank | null; impactPoint: { x: number; y: number }; shouldCreateCluster?: boolean } => {
   const { x, y } = projectile;
 
+  // For bouncing projectiles, don't collide with ground on first bounce
+  const isBouncing = (projectile as any).bounces > 0;
+
   // Ground collision
-  if (y >= GAME_CONSTANTS.GROUND_Y) {
-    return {
+  if (y >= GAME_CONSTANTS.GROUND_Y && !isBouncing) {
+    const result = {
       hitGround: true,
       hitTank: null,
       impactPoint: { x, y: GAME_CONSTANTS.GROUND_Y }
     };
+    
+    // Add cluster bomb effect
+    if ((projectile as any).cluster) {
+      (result as any).shouldCreateCluster = true;
+    }
+    
+    return result;
   }
 
   // Tank collisions with improved hit detection
@@ -67,19 +123,31 @@ export const checkCollisions = (
   };
 
   if (checkTankHit(player1Tank)) {
-    return {
+    const result = {
       hitGround: false,
       hitTank: player1Tank,
       impactPoint: { x, y }
     };
+    
+    if ((projectile as any).cluster) {
+      (result as any).shouldCreateCluster = true;
+    }
+    
+    return result;
   }
 
   if (checkTankHit(player2Tank)) {
-    return {
+    const result = {
       hitGround: false,
       hitTank: player2Tank,
       impactPoint: { x, y }
     };
+    
+    if ((projectile as any).cluster) {
+      (result as any).shouldCreateCluster = true;
+    }
+    
+    return result;
   }
 
   return {
@@ -89,13 +157,24 @@ export const checkCollisions = (
   };
 };
 
-export const createExplosion = (x: number, y: number): Explosion => {
+export const createExplosion = (x: number, y: number, type: 'normal' | 'napalm' | 'cluster' = 'normal'): Explosion => {
   const particles: Particle[] = [];
+  let particleCount = GAME_CONSTANTS.PARTICLE_COUNT;
+  let colors = [`hsl(${Math.random() * 60 + 10}, 100%, ${Math.random() * 30 + 50}%)`];
   
-  for (let i = 0; i < GAME_CONSTANTS.PARTICLE_COUNT; i++) {
-    const angle = (Math.PI * 2 * i) / GAME_CONSTANTS.PARTICLE_COUNT;
-    const velocity = Math.random() * 3 + 1;
-    const life = Math.random() * 20 + 20;
+  // Different explosion types
+  if (type === 'napalm') {
+    particleCount = GAME_CONSTANTS.PARTICLE_COUNT * 1.5;
+    colors = ['#ff4500', '#ff6600', '#ff8800', '#ffaa00'];
+  } else if (type === 'cluster') {
+    particleCount = GAME_CONSTANTS.PARTICLE_COUNT * 0.7;
+    colors = ['#ffff00', '#ffaa00', '#ff6600'];
+  }
+  
+  for (let i = 0; i < particleCount; i++) {
+    const angle = (Math.PI * 2 * i) / particleCount;
+    const velocity = Math.random() * (type === 'napalm' ? 2 : 3) + 1;
+    const life = Math.random() * (type === 'napalm' ? 40 : 20) + (type === 'napalm' ? 30 : 20);
     
     particles.push({
       x,
@@ -104,8 +183,8 @@ export const createExplosion = (x: number, y: number): Explosion => {
       vy: Math.sin(angle) * velocity - Math.random() * 2,
       life,
       maxLife: life,
-      size: Math.random() * 4 + 2,
-      color: `hsl(${Math.random() * 60 + 10}, 100%, ${Math.random() * 30 + 50}%)`
+      size: Math.random() * (type === 'cluster' ? 3 : 4) + 2,
+      color: colors[Math.floor(Math.random() * colors.length)]
     });
   }
 
@@ -114,8 +193,23 @@ export const createExplosion = (x: number, y: number): Explosion => {
     y,
     frame: 0,
     active: true,
-    particles
+    particles,
+    type: type as any
   };
+};
+
+export const createClusterExplosions = (x: number, y: number): Explosion[] => {
+  const explosions: Explosion[] = [];
+  const clusterCount = 5;
+  
+  for (let i = 0; i < clusterCount; i++) {
+    const offsetX = (Math.random() - 0.5) * 100;
+    const offsetY = (Math.random() - 0.5) * 60;
+    
+    explosions.push(createExplosion(x + offsetX, y + offsetY, 'cluster'));
+  }
+  
+  return explosions;
 };
 
 export const updateExplosion = (explosion: Explosion): Explosion => {

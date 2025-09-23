@@ -17,6 +17,7 @@ import {
   updateProjectilePhysics, 
   checkCollisions, 
   createExplosion, 
+  createClusterExplosions,
   updateExplosion, 
   generateWind 
 } from './gamePhysics';
@@ -113,10 +114,11 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
 
       // Update projectile
       if (newState.projectile.active) {
-        const updatedProjectile = updateProjectilePhysics(newState.projectile, newState.wind);
+        const targetTank = newState.currentPlayer === 1 ? newState.player2Tank : newState.player1Tank;
+        const updatedProjectile = updateProjectilePhysics(newState.projectile, newState.wind, targetTank);
         
-        // Check bounds
-        if (updatedProjectile.x < 0 || updatedProjectile.x > GAME_CONSTANTS.CANVAS_WIDTH) {
+        // Check bounds for non-bouncing projectiles
+        if ((updatedProjectile.x < 0 || updatedProjectile.x > GAME_CONSTANTS.CANVAS_WIDTH) && !(updatedProjectile as any).bounces) {
           newState.projectile = { ...updatedProjectile, active: false };
           setTimeout(() => nextTurn(), 500);
           return newState;
@@ -125,8 +127,20 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
         const collision = checkCollisions(updatedProjectile, newState.player1Tank, newState.player2Tank);
         
         if (collision.hitGround || collision.hitTank) {
-          const explosion = createExplosion(collision.impactPoint.x, collision.impactPoint.y);
+          // Determine explosion type based on projectile properties
+          let explosionType: 'normal' | 'napalm' | 'cluster' = 'normal';
+          if ((updatedProjectile as any).napalm) explosionType = 'napalm';
+          else if ((updatedProjectile as any).cluster) explosionType = 'cluster';
+          
+          const explosion = createExplosion(collision.impactPoint.x, collision.impactPoint.y, explosionType);
           newState.explosions = [...newState.explosions, explosion];
+          
+          // Handle cluster bombs
+          if ((collision as any).shouldCreateCluster) {
+            const clusterExplosions = createClusterExplosions(collision.impactPoint.x, collision.impactPoint.y);
+            newState.explosions = [...newState.explosions, ...clusterExplosions];
+          }
+          
           newState.projectile = { ...updatedProjectile, active: false };
           
           if (collision.hitTank) {
@@ -180,7 +194,13 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
       const attackerTank = player === 1 ? newState.player2Tank : newState.player1Tank;
       const defenderTank = player === 1 ? newState.player1Tank : newState.player2Tank;
       
-      const { damage, newShield } = calculateDamageWithPowerups(25, attackerTank.powerups, defenderTank);
+      // Calculate base damage - higher for special projectile types
+      let baseDamage = 25;
+      if ((newState.projectile as any).napalm) baseDamage = 35;
+      if ((newState.projectile as any).cluster) baseDamage = 40;
+      if ((newState.projectile as any).armorPiercing) baseDamage = 30;
+      
+      const { damage, newShield } = calculateDamageWithPowerups(baseDamage, attackerTank.powerups, defenderTank);
       
       if (player === 1) {
         const newHp = Math.max(0, newState.player1Tank.hp - damage);

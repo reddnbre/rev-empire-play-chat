@@ -8,13 +8,20 @@ export interface Tank {
   powerups: PowerupEffect[];
 }
 
+export interface TrailPoint {
+  x: number;
+  y: number;
+  alpha: number;
+  color?: string;
+}
+
 export interface Projectile {
   x: number;
   y: number;
   vx: number;
   vy: number;
   active: boolean;
-  trail: { x: number; y: number; alpha: number }[];
+  trail: TrailPoint[];
 }
 
 export interface Explosion {
@@ -23,6 +30,7 @@ export interface Explosion {
   frame: number;
   active: boolean;
   particles: Particle[];
+  type?: 'normal' | 'napalm' | 'cluster';
 }
 
 export interface Particle {
