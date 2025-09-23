@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import { Tank, Projectile, Explosion, WindEffect, GameState, Powerup } from './gameTypes';
 import { GAME_CONSTANTS, calculateTrajectory } from './gamePhysics';
+import { drawProjectileByType } from './ProjectileRenderer';
+import { drawExplosionByType } from './ExplosionRenderer';
 
 interface GameCanvasProps {
   gameState: GameState;
@@ -236,95 +238,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, projectile: Projectile) => {
     if (!projectile.active) return;
-
-    // Draw trail with enhanced colors based on projectile type
-    projectile.trail.forEach((point, index) => {
-      if (point.alpha > 0) {
-        const size = (GAME_CONSTANTS.PROJECTILE_SIZE * point.alpha) / 2;
-        
-        // Use custom color if available, otherwise default
-        let baseColor = point.color || 'rgba(255, 107, 53, ';
-        if (baseColor.endsWith(', ')) {
-          baseColor = baseColor.slice(0, -2); // Remove trailing comma and space
-        }
-        
-        const trailGradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, size * 2);
-        trailGradient.addColorStop(0, `${baseColor}, ${point.alpha * 0.8})`);
-        trailGradient.addColorStop(0.5, `${baseColor}, ${point.alpha * 0.4})`);
-        trailGradient.addColorStop(1, `${baseColor}, 0)`);
-
-        ctx.fillStyle = trailGradient;
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, size * 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
-
-    // Enhanced projectile with glow and rotation
-    const glowGradient = ctx.createRadialGradient(projectile.x, projectile.y, 0, projectile.x, projectile.y, GAME_CONSTANTS.PROJECTILE_SIZE * 3);
-    glowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-    glowGradient.addColorStop(0.3, 'rgba(255, 107, 53, 0.8)');
-    glowGradient.addColorStop(0.7, 'rgba(255, 107, 53, 0.4)');
-    glowGradient.addColorStop(1, 'rgba(255, 107, 53, 0)');
-
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.arc(projectile.x, projectile.y, GAME_CONSTANTS.PROJECTILE_SIZE * 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Projectile core with spinning effect
-    const rotation = Date.now() * 0.01;
-    ctx.save();
-    ctx.translate(projectile.x, projectile.y);
-    ctx.rotate(rotation);
-
-    const coreGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, GAME_CONSTANTS.PROJECTILE_SIZE);
-    coreGradient.addColorStop(0, '#FFFFFF');
-    coreGradient.addColorStop(0.4, '#FFD700');
-    coreGradient.addColorStop(0.8, '#FF6B35');
-    coreGradient.addColorStop(1, '#DC2626');
-
-    ctx.fillStyle = coreGradient;
-    ctx.beginPath();
-    ctx.arc(0, 0, GAME_CONSTANTS.PROJECTILE_SIZE, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
+    drawProjectileByType(ctx, projectile);
   };
 
   const drawExplosion = (ctx: CanvasRenderingContext2D, explosion: Explosion) => {
     if (!explosion.active) return;
-
-    const progress = explosion.frame / GAME_CONSTANTS.EXPLOSION_FRAMES;
-
-    // Draw particles
-    explosion.particles.forEach(particle => {
-      const alpha = particle.life / particle.maxLife;
-      if (alpha > 0) {
-        const particleGradient = ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.size);
-        particleGradient.addColorStop(0, particle.color.replace(')', `, ${alpha})`).replace('hsl', 'hsla'));
-        particleGradient.addColorStop(1, particle.color.replace(')', `, 0)`).replace('hsl', 'hsla'));
-
-        ctx.fillStyle = particleGradient;
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
-
-    // Central explosion flash
-    if (progress < 0.3) {
-      const flashSize = 50 * (1 - progress * 2);
-      const flashGradient = ctx.createRadialGradient(explosion.x, explosion.y, 0, explosion.x, explosion.y, flashSize);
-      flashGradient.addColorStop(0, `rgba(255, 255, 255, ${1 - progress * 3})`);
-      flashGradient.addColorStop(0.5, `rgba(255, 200, 100, ${(1 - progress * 3) * 0.7})`);
-      flashGradient.addColorStop(1, 'rgba(255, 100, 50, 0)');
-
-      ctx.fillStyle = flashGradient;
-      ctx.beginPath();
-      ctx.arc(explosion.x, explosion.y, flashSize, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    drawExplosionByType(ctx, explosion);
   };
 
   const drawWindIndicator = (ctx: CanvasRenderingContext2D, wind: WindEffect) => {

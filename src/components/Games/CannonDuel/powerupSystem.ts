@@ -215,6 +215,7 @@ export const modifyProjectileWithPowerups = (
   // Base damage from projectile or default
   let damage = projectile.damage || 25;
   let explosionType = projectile.explosionType || 'normal';
+  let projectileType: import('./gameTypes').ProjectileType = 'basic';
   
   // Set trail colors and effects based on powerups
   const powerupColors: Record<PowerupType, string> = {
@@ -261,6 +262,7 @@ export const modifyProjectileWithPowerups = (
         (mainProjectile as any).homing = true;
         (mainProjectile as any).target = targetTank;
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.missile }));
+        projectileType = 'missile';
         break;
         
       case 'bounce_shot':
@@ -273,19 +275,23 @@ export const modifyProjectileWithPowerups = (
         damage *= 0.7; // Individual cluster damage is lower
         explosionType = 'cluster';
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.cluster_bomb }));
+        projectileType = 'cluster';
         break;
         
-      case 'armor_piercing':
-        (mainProjectile as any).armorPiercing = true;
-        damage *= 1.5; // Significantly more damage
-        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.armor_piercing }));
-        break;
         
       case 'napalm':
         (mainProjectile as any).napalm = true;
         damage *= 1.3; // More damage
         explosionType = 'napalm';
         mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.napalm }));
+        projectileType = 'napalm';
+        break;
+        
+      case 'armor_piercing':
+        (mainProjectile as any).armorPiercing = true;
+        damage *= 1.5; // Significantly more damage
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.armor_piercing }));
+        projectileType = 'plasma';
         break;
         
       case 'laser_sight':
@@ -294,9 +300,10 @@ export const modifyProjectileWithPowerups = (
     }
   }
   
-  // Apply final damage and explosion type to main projectile
+  // Apply final damage, explosion type, and projectile type to main projectile
   mainProjectile.damage = damage;
   mainProjectile.explosionType = explosionType;
+  mainProjectile.projectileType = projectileType;
   
   projectiles.unshift(mainProjectile);
   return projectiles;

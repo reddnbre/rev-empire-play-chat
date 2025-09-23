@@ -41,7 +41,19 @@ interface CannonDuelGameProps {
 export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialGameMode = 'pvp' }) => {
   const animationRef = useRef<number>();
   const botRef = useRef<BotAI>(createBotAI('medium'));
-  const { playMove, playWin, playLose } = useSoundEffects();
+  const { 
+    playMove, 
+    playWin, 
+    playLose, 
+    playCannonFire, 
+    playMissileLaunch, 
+    playPlasmaShot, 
+    playClusterBomb, 
+    playNapalmFire,
+    playExplosion,
+    playNapalmExplosion,
+    playClusterExplosion
+  } = useSoundEffects();
 
   const [showResult, setShowResult] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
@@ -148,6 +160,19 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
             newState.currentPlayer
           );
           newState.explosions = [...newState.explosions, explosion];
+          
+          // Play appropriate explosion sound
+          const explosionType = newState.projectile.explosionType || 'normal';
+          switch (explosionType) {
+            case 'napalm':
+              playNapalmExplosion();
+              break;
+            case 'cluster':
+              playClusterExplosion();
+              break;
+            default:
+              playExplosion();
+          }
           newState.projectile = { ...updatedProjectile, active: false };
           setTimeout(() => nextTurn(), 800);
           playMove();
@@ -163,6 +188,18 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
             newState.currentPlayer
           );
           newState.explosions = [...newState.explosions, explosion];
+          
+          // Play appropriate explosion sound
+          switch (explosionType) {
+            case 'napalm':
+              playNapalmExplosion();
+              break;
+            case 'cluster':
+              playClusterExplosion();
+              break;
+            default:
+              playExplosion();
+          }
           
           // Handle cluster bombs
           if ((collision as any).shouldCreateCluster) {
@@ -418,7 +455,24 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
 
       const projectiles = modifyProjectileWithPowerups(baseProjectile, currentTank, targetTank);
       
-      playMove();
+      // Play appropriate firing sound based on projectile type
+      const projectileType = projectiles[0]?.projectileType || 'basic';
+      switch (projectileType) {
+        case 'missile':
+          playMissileLaunch();
+          break;
+        case 'plasma':
+          playPlasmaShot();
+          break;
+        case 'cluster':
+          playClusterBomb();
+          break;
+        case 'napalm':
+          playNapalmFire();
+          break;
+        default:
+          playCannonFire();
+      }
       
       return {
         ...prevState,
