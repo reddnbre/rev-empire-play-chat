@@ -43,22 +43,27 @@ export class BotAI {
       }
     }
     
-    // Priority 2: Move out of danger
-    if (!shouldMove && analysis.threatLevel > 0.8) {
+    // Priority 2: Close range - just shoot (don't overthink it)
+    if (!shouldMove && distance < 80) {
+      strategicReason = "Point-blank shot - taking it!";
+    }
+    
+    // Priority 3: Move out of danger (but not if super close)
+    else if (!shouldMove && analysis.threatLevel > 0.8 && distance > 100) {
       shouldMove = this.calculateEvasiveMove(botTank, targetTank, obstacles);
       strategicReason = "Evading imminent threat";
     }
     
-    // Priority 3: Destroy blocking obstacles if beneficial
-    if (!shouldMove && analysis.blockingObstacles.length > 0) {
+    // Priority 4: Destroy blocking obstacles if beneficial
+    else if (!shouldMove && analysis.blockingObstacles.length > 0) {
       const shouldDestroyObstacle = this.shouldDestroyObstacle(botTank, targetTank, analysis.blockingObstacles);
       if (shouldDestroyObstacle) {
         strategicReason = "Destroying tactical obstacle";
       }
     }
     
-    // Priority 4: Optimal positioning for attack
-    if (!shouldMove) {
+    // Priority 5: Optimal positioning for attack
+    else if (!shouldMove) {
       const optimalPosition = this.calculateOptimalPosition(botTank, targetTank, obstacles, distance);
       if (optimalPosition !== 'stay') {
         shouldMove = optimalPosition;
