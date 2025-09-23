@@ -33,50 +33,64 @@ export class BotAI {
     let targetPowerup: Powerup | undefined = undefined;
     let strategicReason = "Calculating optimal shot";
 
-    // Priority 1: Collect powerful powerups if nearby and safe
-    if (analysis.nearbyPowerups.length > 0 && analysis.threatLevel < 0.7) {
+    // STRATEGIC DECISION TREE - Bot thinks like a human player
+    
+    // Priority 1: LETHAL SHOT - If bot can finish the game, take it!
+    if (analysis.hasDirectLineOfSight && this.canKillTarget(botTank, targetTank, distance)) {
+      strategicReason = "Going for the kill shot!";
+    }
+    
+    // Priority 2: HIGH-VALUE POWERUP COLLECTION - Worth taking risks for game-changers
+    else if (analysis.nearbyPowerups.length > 0 && analysis.opportunityScore > 0.4) {
       const bestPowerup = this.selectBestPowerup(analysis.nearbyPowerups, botTank);
       if (bestPowerup && Math.abs(bestPowerup.x - botTank.x) > 25) {
         shouldMove = bestPowerup.x > botTank.x ? 'right' : 'left';
         targetPowerup = bestPowerup;
-        strategicReason = `Collecting ${bestPowerup.name} powerup`;
+        strategicReason = `Securing ${bestPowerup.name} - high tactical value!`;
       }
     }
     
-    // Priority 2: Close range - just shoot (don't overthink it)
-    if (!shouldMove && distance < 80) {
+    // Priority 3: POINT-BLANK EXECUTION - Close range, just shoot
+    else if (distance < 80 && analysis.hasDirectLineOfSight) {
       strategicReason = "Point-blank shot - taking it!";
     }
     
-    // Priority 3: Move out of danger (but not if super close)
-    else if (!shouldMove && analysis.threatLevel > 0.8 && distance > 100) {
-      shouldMove = this.calculateEvasiveMove(botTank, targetTank, obstacles);
-      strategicReason = "Evading imminent threat";
+    // Priority 4: CLEAR TACTICAL PATH - Destroy obstacles that block good opportunities
+    else if (analysis.destructibleBlockers.length > 0 && this.shouldClearPath(botTank, targetTank, analysis)) {
+      strategicReason = "Clearing tactical path for better positioning";
     }
     
-    // Priority 4: Destroy blocking obstacles if beneficial
-    else if (!shouldMove && analysis.blockingObstacles.length > 0) {
-      const shouldDestroyObstacle = this.shouldDestroyObstacle(botTank, targetTank, analysis.blockingObstacles);
-      if (shouldDestroyObstacle) {
-        strategicReason = "Destroying tactical obstacle";
+    // Priority 5: THREAT EVASION - Only move if in serious danger AND not close
+    else if (analysis.threatLevel > 0.7 && distance > 120 && !analysis.hasDirectLineOfSight) {
+      shouldMove = this.calculateEvasiveMove(botTank, targetTank, obstacles);
+      strategicReason = "Tactical repositioning under fire";
+    }
+    
+    // Priority 6: AGGRESSIVE POSITIONING - Move to dominate the battlefield
+    else if (analysis.opportunityScore > analysis.threatLevel) {
+      const aggressivePosition = this.calculateAggressivePosition(botTank, targetTank, obstacles, analysis);
+      if (aggressivePosition !== 'stay') {
+        shouldMove = aggressivePosition;
+        strategicReason = "Advancing for tactical advantage";
       }
     }
     
-    // Priority 5: Optimal positioning for attack
-    else if (!shouldMove) {
-      const optimalPosition = this.calculateOptimalPosition(botTank, targetTank, obstacles, distance);
-      if (optimalPosition !== 'stay') {
-        shouldMove = optimalPosition;
-        strategicReason = "Moving to optimal firing position";
+    // Priority 7: OBSTACLE MANAGEMENT - Smart obstacle handling
+    else if (analysis.blockingObstacles.length > 0) {
+      const obstacleStrategy = this.determineObstacleStrategy(botTank, targetTank, analysis);
+      if (obstacleStrategy === 'destroy') {
+        strategicReason = "Destroying obstacle for clear shot";
+      } else if (obstacleStrategy === 'arc') {
+        strategicReason = "Arcing shot over obstacle";
       }
     }
 
     // Calculate shot with advanced physics and strategic considerations
     const { angle, power } = this.calculateAdvancedShot(botTank, targetTank, wind, obstacles, analysis);
     
-    // Thinking time based on complexity (bot always thinks strategically)
+    // Dynamic thinking time based on complexity and aggression
     const complexity = analysis.threatLevel + (analysis.nearbyPowerups.length * 0.1) + (obstacles.length * 0.05);
-    const thinkingTime = 2000 + (complexity * 1000); // 2-5 seconds based on situation complexity
+    const thinkingTime = 1500 + (complexity * 800); // 1.5-3 seconds - faster, more confident
 
     return { 
       angle, 
@@ -96,35 +110,56 @@ export class BotAI {
   ) {
     const distance = Math.abs(targetTank.x - botTank.x);
     
-    // Analyze powerups in range
+    // Analyze powerups in range - POWERUPS ARE GOOD, NOT THREATS!
     const nearbyPowerups = powerups.filter(p => 
       p.active && !p.collected && Math.abs(p.x - botTank.x) < 300
     );
     
-    // Calculate threat level based on distance and enemy powerups
+    // Calculate ACTUAL threat level - only from enemy capabilities and positioning
     let threatLevel = 0;
-    if (distance < 200) threatLevel += 0.4; // Close combat is risky
+    
+    // Distance-based threat (only if enemy has line of sight)
+    const hasDirectLineOfSight = !this.checkLineOfSightBlocked(botTank, targetTank, obstacles);
+    if (distance < 200 && hasDirectLineOfSight) {
+      threatLevel += 0.3; // Reduced - close combat isn't always bad
+    }
+    
+    // Enemy powerup threat - only count actual dangerous ones
     if (targetTank.powerups.length > 0) {
-      threatLevel += targetTank.powerups.length * 0.2;
-      // Extra threat from dangerous powerups
       const dangerousPowerups = targetTank.powerups.filter(p => 
         ['cluster_bomb', 'napalm', 'armor_piercing', 'missile'].includes(p.type)
       );
-      threatLevel += dangerousPowerups.length * 0.3;
+      threatLevel += dangerousPowerups.length * 0.25;
     }
     
-    // Identify blocking obstacles
+    // Health disadvantage increases threat
+    const healthRatio = botTank.hp / targetTank.hp;
+    if (healthRatio < 0.5) threatLevel += 0.3;
+    
+    // Identify different types of obstacles
     const blockingObstacles = obstacles.filter(obs => {
       const obsBetween = (botTank.x < obs.x && obs.x < targetTank.x) || 
                         (targetTank.x < obs.x && obs.x < botTank.x);
-      return obsBetween && obs.destructible;
+      return obsBetween;
     });
+    
+    const destructibleBlockers = blockingObstacles.filter(obs => obs.destructible);
+    const permanentBlockers = blockingObstacles.filter(obs => !obs.destructible);
+    
+    // Calculate opportunity score (powerups + tactical advantage)
+    let opportunityScore = nearbyPowerups.length * 0.2;
+    if (botTank.hp > targetTank.hp) opportunityScore += 0.3; // Health advantage
+    if (botTank.powerups.length > targetTank.powerups.length) opportunityScore += 0.2;
     
     return {
       nearbyPowerups,
       threatLevel: Math.min(1, threatLevel),
       blockingObstacles,
-      distance
+      destructibleBlockers,
+      permanentBlockers,
+      distance,
+      opportunityScore,
+      hasDirectLineOfSight
     };
   }
 
@@ -208,22 +243,33 @@ export class BotAI {
     obstacles: Obstacle[], 
     currentDistance: number
   ): 'left' | 'right' | 'stay' {
-    const optimalDistance = 350; // Sweet spot for accuracy vs safety
+    // AGGRESSIVE POSITIONING - Bot wants to win, not just survive
+    const aggressiveDistance = 200; // Much closer than before - bot is confident
     
-    if (currentDistance < 150) {
-      // Too close - dangerous
-      return botTank.x < targetTank.x ? 'left' : 'right';
-    } else if (currentDistance > 600) {
-      // Too far - move closer for better accuracy
+    // If bot has powerups, be more aggressive
+    const powerupBonus = botTank.powerups.length * 50;
+    const targetDistance = Math.max(150, aggressiveDistance - powerupBonus);
+    
+    if (currentDistance < 80) {
+      // Very close - perfect for high damage, stay and fight
+      return 'stay';
+    } else if (currentDistance > targetDistance + 100) {
+      // Too far - move closer for better accuracy and damage
       return botTank.x < targetTank.x ? 'right' : 'left';
-    } else if (Math.abs(currentDistance - optimalDistance) > 100) {
-      // Move toward optimal distance
-      const needsToBeCloser = currentDistance > optimalDistance;
-      if (needsToBeCloser) {
-        return botTank.x < targetTank.x ? 'right' : 'left';
-      } else {
-        return botTank.x < targetTank.x ? 'left' : 'right';
-      }
+    } else if (currentDistance < targetDistance - 50) {
+      // Close enough for devastating shots - stay aggressive
+      return 'stay';
+    }
+    
+    // Check if moving would give tactical advantage
+    const leftAdvantage = this.evaluatePositionAdvantage(botTank.x - 80, targetTank, obstacles);
+    const rightAdvantage = this.evaluatePositionAdvantage(botTank.x + 80, targetTank, obstacles);
+    const currentAdvantage = this.evaluatePositionAdvantage(botTank.x, targetTank, obstacles);
+    
+    if (leftAdvantage > currentAdvantage && leftAdvantage > rightAdvantage) {
+      return 'left';
+    } else if (rightAdvantage > currentAdvantage) {
+      return 'right';
     }
     
     return 'stay';
@@ -359,6 +405,120 @@ export class BotAI {
     });
     
     return { angle: angleAdjust, power: powerAdjust };
+  }
+
+  // === NEW STRATEGIC METHODS ===
+
+  private checkLineOfSightBlocked(botTank: Tank, targetTank: Tank, obstacles: Obstacle[]): boolean {
+    return obstacles.some(obs => {
+      const between = (botTank.x < obs.x && obs.x < targetTank.x) || 
+                     (targetTank.x < obs.x && obs.x < botTank.x);
+      return between && obs.y < GAME_CONSTANTS.GROUND_Y - 30;
+    });
+  }
+
+  private canKillTarget(botTank: Tank, targetTank: Tank, distance: number): boolean {
+    // Estimate if current shot could be lethal
+    let estimatedDamage = 25; // Base damage
+    
+    // Add powerup damage bonuses
+    botTank.powerups.forEach(powerup => {
+      switch (powerup.type) {
+        case 'armor_piercing': estimatedDamage += 15; break;
+        case 'cluster_bomb': estimatedDamage += 20; break;
+        case 'missile': estimatedDamage += 15; break;
+        case 'napalm': estimatedDamage += 10; break;
+      }
+    });
+    
+    // Close range bonus (more likely to hit)
+    if (distance < 150) estimatedDamage *= 1.2;
+    
+    return estimatedDamage >= targetTank.hp;
+  }
+
+  private shouldClearPath(botTank: Tank, targetTank: Tank, analysis: any): boolean {
+    // Clear path if it opens up better tactical opportunities
+    const hasValuablePowerups = analysis.nearbyPowerups.some((p: any) => 
+      ['cluster_bomb', 'missile', 'napalm'].includes(p.type)
+    );
+    
+    const healthAdvantage = botTank.hp > targetTank.hp * 1.2;
+    
+    return hasValuablePowerups || healthAdvantage || analysis.opportunityScore > 0.6;
+  }
+
+  private calculateAggressivePosition(
+    botTank: Tank, 
+    targetTank: Tank, 
+    obstacles: Obstacle[], 
+    analysis: any
+  ): 'left' | 'right' | 'stay' {
+    const distance = Math.abs(targetTank.x - botTank.x);
+    
+    // If bot has advantage, move aggressively
+    if (analysis.opportunityScore > 0.5) {
+      const aggressiveDistance = 250; // Closer for more accurate shots
+      
+      if (distance > aggressiveDistance) {
+        // Move closer
+        return botTank.x < targetTank.x ? 'right' : 'left';
+      } else if (distance < 100) {
+        // Too close - back off slightly
+        return botTank.x < targetTank.x ? 'left' : 'right';
+      }
+    }
+    
+    return 'stay';
+  }
+
+  private determineObstacleStrategy(
+    botTank: Tank, 
+    targetTank: Tank, 
+    analysis: any
+  ): 'destroy' | 'arc' | 'ignore' {
+    const distance = Math.abs(targetTank.x - botTank.x);
+    
+    // If close range and destructible obstacles, destroy them
+    if (distance < 300 && analysis.destructibleBlockers.length > 0) {
+      return 'destroy';
+    }
+    
+    // If far range, try to arc over
+    if (distance > 300 && analysis.permanentBlockers.length > 0) {
+      return 'arc';
+    }
+    
+    // If obstacles are blocking valuable powerups, destroy them
+    if (analysis.nearbyPowerups.length > 0 && analysis.destructibleBlockers.length > 0) {
+      return 'destroy';
+    }
+    
+    return 'arc';
+  }
+
+  private evaluatePositionAdvantage(x: number, targetTank: Tank, obstacles: Obstacle[]): number {
+    let advantage = 0;
+    
+    // Distance scoring - closer is better (aggressive bot)
+    const distance = Math.abs(x - targetTank.x);
+    if (distance < 200) advantage += 0.5;
+    else if (distance < 300) advantage += 0.3;
+    else if (distance > 500) advantage -= 0.3; // Too far is bad
+    
+    // Clear line of sight bonus
+    const hasObstaclesBetween = obstacles.some(obs => {
+      const between = (x < obs.x && obs.x < targetTank.x) || 
+                     (targetTank.x < obs.x && obs.x < x);
+      return between && obs.y < GAME_CONSTANTS.GROUND_Y - 50;
+    });
+    
+    if (!hasObstaclesBetween) advantage += 0.4;
+    
+    // Boundary penalties
+    if (x < 100 || x > GAME_CONSTANTS.CANVAS_WIDTH - 100) advantage -= 0.5;
+    
+    return advantage;
   }
 
   recordShotResult(distance: number, angle: number, result: 'hit' | 'miss' | 'close') {
