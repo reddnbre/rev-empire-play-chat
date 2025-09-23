@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Target, Zap } from 'lucide-react';
+import { ArrowLeft, Target, Zap, Shield, Crosshair } from 'lucide-react';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import GameResultDialog from './GameResultDialog';
 
@@ -38,10 +38,11 @@ type GameMode = 'pvp' | 'bot';
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 400;
-const GROUND_Y = 350;
-const TANK_SIZE = 30;
-const GRAVITY = 0.3;
-const EXPLOSION_FRAMES = 20;
+const GROUND_Y = 320;
+const TANK_SIZE = 40;
+const GRAVITY = 0.4;
+const EXPLOSION_FRAMES = 30;
+const PROJECTILE_SIZE = 6;
 
 const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,82 +81,191 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
 
   const [explosions, setExplosions] = useState<Explosion[]>([]);
 
-  // Drawing functions
+  // Enhanced drawing functions
   const drawTank = (ctx: CanvasRenderingContext2D, tank: Tank, isPlayer1: boolean) => {
-    // Tank body
-    ctx.fillStyle = isPlayer1 ? '#4A90E2' : '#E24A4A';
-    ctx.fillRect(tank.x - TANK_SIZE/2, tank.y, TANK_SIZE, TANK_SIZE);
+    const centerX = tank.x;
+    const centerY = tank.y + TANK_SIZE/2;
+    
+    // Tank shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(centerX - TANK_SIZE/2 + 2, tank.y + 2, TANK_SIZE, TANK_SIZE);
+    
+    // Tank body gradient
+    const gradient = ctx.createLinearGradient(centerX - TANK_SIZE/2, tank.y, centerX + TANK_SIZE/2, tank.y + TANK_SIZE);
+    if (isPlayer1) {
+      gradient.addColorStop(0, '#60A5FA');
+      gradient.addColorStop(0.5, '#3B82F6');
+      gradient.addColorStop(1, '#1E40AF');
+    } else {
+      gradient.addColorStop(0, '#F87171');
+      gradient.addColorStop(0.5, '#EF4444');
+      gradient.addColorStop(1, '#DC2626');
+    }
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(centerX - TANK_SIZE/2, tank.y, TANK_SIZE, TANK_SIZE);
+    
+    // Tank border
+    ctx.strokeStyle = isPlayer1 ? '#1E3A8A' : '#991B1B';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(centerX - TANK_SIZE/2, tank.y, TANK_SIZE, TANK_SIZE);
     
     // Cannon
-    const cannonLength = 25;
+    const cannonLength = 30;
     const cannonAngle = isPlayer1 ? 0 : Math.PI;
-    const cannonX = tank.x + Math.cos(cannonAngle) * cannonLength;
-    const cannonY = tank.y + TANK_SIZE/2;
+    const cannonX = centerX + Math.cos(cannonAngle) * cannonLength;
+    const cannonY = centerY;
     
-    ctx.strokeStyle = isPlayer1 ? '#2E5C8A' : '#A83232';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = isPlayer1 ? '#1E3A8A' : '#991B1B';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(tank.x, tank.y + TANK_SIZE/2);
+    ctx.moveTo(centerX, centerY);
     ctx.lineTo(cannonX, cannonY);
     ctx.stroke();
+    
+    // Cannon tip
+    ctx.fillStyle = isPlayer1 ? '#1E3A8A' : '#991B1B';
+    ctx.beginPath();
+    ctx.arc(cannonX, cannonY, 3, 0, Math.PI * 2);
+    ctx.fill();
 
+    // HP Bar background
+    const barWidth = 50;
+    const barHeight = 8;
+    const barX = centerX - barWidth/2;
+    const barY = tank.y - 20;
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+    
     // HP Bar
-    const barWidth = 40;
-    const barHeight = 6;
-    const barX = tank.x - barWidth/2;
-    const barY = tank.y - 15;
-    
-    // Background
-    ctx.fillStyle = '#333';
-    ctx.fillRect(barX, barY, barWidth, barHeight);
-    
-    // HP
     const hpPercent = tank.hp / tank.maxHp;
-    ctx.fillStyle = hpPercent > 0.5 ? '#4CAF50' : hpPercent > 0.25 ? '#FFC107' : '#F44336';
+    const hpGradient = ctx.createLinearGradient(barX, barY, barX + barWidth, barY);
+    if (hpPercent > 0.6) {
+      hpGradient.addColorStop(0, '#22C55E');
+      hpGradient.addColorStop(1, '#16A34A');
+    } else if (hpPercent > 0.3) {
+      hpGradient.addColorStop(0, '#EAB308');
+      hpGradient.addColorStop(1, '#CA8A04');
+    } else {
+      hpGradient.addColorStop(0, '#EF4444');
+      hpGradient.addColorStop(1, '#DC2626');
+    }
+    
+    ctx.fillStyle = hpGradient;
     ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
     
     // HP Text
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px Arial';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`${tank.hp}/100`, tank.x, barY - 5);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.strokeText(`${tank.hp}/100`, centerX, barY - 5);
+    ctx.fillText(`${tank.hp}/100`, centerX, barY - 5);
   };
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, proj: Projectile) => {
     if (!proj.active) return;
     
-    ctx.fillStyle = '#FF6B35';
+    // Projectile glow
+    const glowGradient = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, PROJECTILE_SIZE * 2);
+    glowGradient.addColorStop(0, 'rgba(255, 107, 53, 0.8)');
+    glowGradient.addColorStop(0.5, 'rgba(255, 107, 53, 0.4)');
+    glowGradient.addColorStop(1, 'rgba(255, 107, 53, 0)');
+    
+    ctx.fillStyle = glowGradient;
     ctx.beginPath();
-    ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+    ctx.arc(proj.x, proj.y, PROJECTILE_SIZE * 2, 0, Math.PI * 2);
     ctx.fill();
+    
+    // Projectile core
+    const coreGradient = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, PROJECTILE_SIZE);
+    coreGradient.addColorStop(0, '#FFF');
+    coreGradient.addColorStop(0.3, '#FF6B35');
+    coreGradient.addColorStop(1, '#DC2626');
+    
+    ctx.fillStyle = coreGradient;
+    ctx.beginPath();
+    ctx.arc(proj.x, proj.y, PROJECTILE_SIZE, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Projectile border
+    ctx.strokeStyle = '#991B1B';
+    ctx.lineWidth = 1;
+    ctx.stroke();
   };
 
   const drawExplosion = (ctx: CanvasRenderingContext2D, explosion: Explosion) => {
     if (!explosion.active) return;
     
     const progress = explosion.frame / EXPLOSION_FRAMES;
-    const size = 30 * (1 - progress) + 10 * progress;
+    const size = 40 * (1 - progress * 0.3);
     const alpha = 1 - progress;
     
+    // Outer explosion ring
+    ctx.globalAlpha = alpha * 0.6;
+    const outerGradient = ctx.createRadialGradient(explosion.x, explosion.y, 0, explosion.x, explosion.y, size * 1.5);
+    outerGradient.addColorStop(0, `hsl(${20 + progress * 20}, 100%, 60%)`);
+    outerGradient.addColorStop(0.5, `hsl(${30 + progress * 30}, 100%, 50%)`);
+    outerGradient.addColorStop(1, `hsl(${40 + progress * 40}, 100%, 30%)`);
+    
+    ctx.fillStyle = outerGradient;
+    ctx.beginPath();
+    ctx.arc(explosion.x, explosion.y, size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner explosion core
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = `hsl(${20 + progress * 40}, 100%, 50%)`;
+    const innerGradient = ctx.createRadialGradient(explosion.x, explosion.y, 0, explosion.x, explosion.y, size);
+    innerGradient.addColorStop(0, '#FFFFFF');
+    innerGradient.addColorStop(0.3, `hsl(${50 + progress * 10}, 100%, 70%)`);
+    innerGradient.addColorStop(0.8, `hsl(${30 + progress * 20}, 100%, 50%)`);
+    innerGradient.addColorStop(1, `hsl(${10 + progress * 30}, 100%, 30%)`);
+    
+    ctx.fillStyle = innerGradient;
     ctx.beginPath();
     ctx.arc(explosion.x, explosion.y, size, 0, Math.PI * 2);
     ctx.fill();
+    
     ctx.globalAlpha = 1;
   };
 
   const drawBackground = (ctx: CanvasRenderingContext2D) => {
-    // Sky
-    const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-    gradient.addColorStop(0, '#87CEEB');
-    gradient.addColorStop(1, '#E0F6FF');
-    ctx.fillStyle = gradient;
+    // Sky gradient
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    skyGradient.addColorStop(0, '#0F172A');
+    skyGradient.addColorStop(0.3, '#1E293B');
+    skyGradient.addColorStop(0.7, '#334155');
+    skyGradient.addColorStop(1, '#475569');
+    ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, GROUND_Y);
     
-    // Ground
-    ctx.fillStyle = '#8B7355';
+    // Stars
+    ctx.fillStyle = '#FFFFFF';
+    for (let i = 0; i < 50; i++) {
+      const x = (i * 123) % CANVAS_WIDTH;
+      const y = (i * 456) % (GROUND_Y - 50);
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 1.5 + 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Ground gradient
+    const groundGradient = ctx.createLinearGradient(0, GROUND_Y, 0, CANVAS_HEIGHT);
+    groundGradient.addColorStop(0, '#44403C');
+    groundGradient.addColorStop(0.5, '#57534E');
+    groundGradient.addColorStop(1, '#292524');
+    ctx.fillStyle = groundGradient;
     ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+    
+    // Ground texture
+    ctx.fillStyle = 'rgba(120, 113, 108, 0.3)';
+    for (let i = 0; i < CANVAS_WIDTH; i += 20) {
+      const height = Math.random() * 10 + 5;
+      ctx.fillRect(i, GROUND_Y, Math.random() * 15 + 5, height);
+    }
   };
 
   const draw = () => {
@@ -174,35 +284,46 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     
     explosions.forEach(explosion => drawExplosion(ctx, explosion));
 
-    // Trajectory preview when aiming
-    if (gamePhase === 'aim') {
+    // Enhanced trajectory preview when aiming
+    if (gamePhase === 'aim' && (gameMode === 'pvp' || currentPlayer === 1)) {
       const currentTank = currentPlayer === 1 ? player1Tank : player2Tank;
       const radians = (angle[0] * Math.PI) / 180;
-      const velocity = power[0] / 10;
+      const velocity = power[0] / 8;
       const direction = currentPlayer === 1 ? 1 : -1;
       
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
+      // Trajectory line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 4]);
       ctx.beginPath();
       
       let x = currentTank.x;
       let y = currentTank.y + TANK_SIZE/2;
       ctx.moveTo(x, y);
       
-      for (let t = 0; t < 100; t += 2) {
+      const points = [];
+      for (let t = 0; t < 120; t += 3) {
         const newX = currentTank.x + (velocity * Math.cos(radians) * direction) * t;
         const newY = currentTank.y + TANK_SIZE/2 - (velocity * Math.sin(radians) * t - 0.5 * GRAVITY * t * t);
         
-        if (newY >= GROUND_Y) break;
+        if (newY >= GROUND_Y || newX < 0 || newX > CANVAS_WIDTH) break;
         
+        points.push({ x: newX, y: newY });
         ctx.lineTo(newX, newY);
-        x = newX;
-        y = newY;
       }
       
       ctx.stroke();
       ctx.setLineDash([]);
+      
+      // Trajectory dots
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      points.forEach((point, index) => {
+        if (index % 4 === 0) {
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
     }
   };
 
@@ -217,32 +338,32 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
         // Check ground collision
         if (newY >= GROUND_Y) {
           createExplosion(newX, GROUND_Y);
-          nextTurn();
+          setTimeout(() => nextTurn(), 800);
           return { ...prev, active: false };
         }
         
-        // Check tank collisions
-        const player1Hit = Math.abs(newX - player1Tank.x) < TANK_SIZE/2 && 
-                          Math.abs(newY - (player1Tank.y + TANK_SIZE/2)) < TANK_SIZE/2;
+        // Check tank collisions (improved hit detection)
+        const player1Hit = Math.abs(newX - player1Tank.x) < TANK_SIZE/2 + PROJECTILE_SIZE && 
+                          newY >= player1Tank.y && newY <= player1Tank.y + TANK_SIZE;
         
-        const player2Hit = Math.abs(newX - player2Tank.x) < TANK_SIZE/2 && 
-                          Math.abs(newY - (player2Tank.y + TANK_SIZE/2)) < TANK_SIZE/2;
+        const player2Hit = Math.abs(newX - player2Tank.x) < TANK_SIZE/2 + PROJECTILE_SIZE && 
+                          newY >= player2Tank.y && newY <= player2Tank.y + TANK_SIZE;
         
         if (player1Hit) {
-          createExplosion(player1Tank.x, player1Tank.y + TANK_SIZE/2);
+          createExplosion(newX, newY);
           damagePlayer(1);
           return { ...prev, active: false };
         }
         
         if (player2Hit) {
-          createExplosion(player2Tank.x, player2Tank.y + TANK_SIZE/2);
+          createExplosion(newX, newY);
           damagePlayer(2);
           return { ...prev, active: false };
         }
         
         // Check bounds
         if (newX < 0 || newX > CANVAS_WIDTH) {
-          nextTurn();
+          setTimeout(() => nextTurn(), 500);
           return { ...prev, active: false };
         }
         
@@ -273,35 +394,41 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     playMove();
   };
 
-  const damagePlayer = (player: 1 | 2) => {
+  const damagePlayer = useCallback((player: 1 | 2) => {
+    const damage = 25;
+    
     if (player === 1) {
       setPlayer1Tank(prev => {
-        const newHp = Math.max(0, prev.hp - 20);
+        const newHp = Math.max(0, prev.hp - damage);
         if (newHp <= 0) {
-          setWinner(2);
-          setGamePhase('finished');
-          setShowResult(true);
-          playLose();
+          setTimeout(() => {
+            setWinner(2);
+            setGamePhase('finished');
+            setShowResult(true);
+            playLose();
+          }, 500);
+        } else {
+          setTimeout(() => nextTurn(), 1000);
         }
         return { ...prev, hp: newHp };
       });
     } else {
       setPlayer2Tank(prev => {
-        const newHp = Math.max(0, prev.hp - 20);
+        const newHp = Math.max(0, prev.hp - damage);
         if (newHp <= 0) {
-          setWinner(1);
-          setGamePhase('finished');
-          setShowResult(true);
-          playWin();
+          setTimeout(() => {
+            setWinner(1);
+            setGamePhase('finished');
+            setShowResult(true);
+            playWin();
+          }, 500);
+        } else {
+          setTimeout(() => nextTurn(), 1000);
         }
         return { ...prev, hp: newHp };
       });
     }
-    
-    if (winner === null) {
-      nextTurn();
-    }
-  };
+  }, [playWin, playLose]);
 
   const nextTurn = () => {
     setCurrentPlayer(prev => prev === 1 ? 2 : 1);
@@ -358,12 +485,12 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     setGamePhase('aim');
   };
 
-  const fire = () => {
+  const fire = useCallback(() => {
     if (gamePhase !== 'aim') return;
     
     const currentTank = currentPlayer === 1 ? player1Tank : player2Tank;
     const radians = (angle[0] * Math.PI) / 180;
-    const velocity = power[0] / 10;
+    const velocity = power[0] / 8;
     const direction = currentPlayer === 1 ? 1 : -1;
     
     setProjectile({
@@ -376,7 +503,7 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
     
     setGamePhase('firing');
     playMove();
-  };
+  }, [gamePhase, currentPlayer, player1Tank, player2Tank, angle, power, playMove]);
 
   const resetGame = () => {
     setPlayer1Tank({ x: 100, y: GROUND_Y - TANK_SIZE, hp: 100, maxHp: 100 });
@@ -459,22 +586,23 @@ const CannonDuel: React.FC<CannonDuelProps> = ({ onBack }) => {
       </div>
 
       {/* Game Canvas */}
-      <Card>
-        <CardContent className="p-4">
+      <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700">
+        <CardContent className="p-6">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="border rounded-lg bg-sky-100 w-full max-w-full h-auto"
+            className="border-2 border-slate-600 rounded-xl shadow-2xl w-full max-w-full h-auto bg-slate-900"
             style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
           />
         </CardContent>
       </Card>
 
       {/* Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
+      <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            {currentPlayer === 1 ? <Shield className="w-5 h-5 text-blue-600" /> : <Crosshair className="w-5 h-5 text-red-600" />}
             {currentPlayer === 1 ? 'Player 1' : (gameMode === 'bot' ? 'Bot' : 'Player 2')} Controls
           </CardTitle>
         </CardHeader>
