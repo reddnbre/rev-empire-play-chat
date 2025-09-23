@@ -24,82 +24,231 @@ export class BotAI {
     strategicReason: string;
   } {
     const distance = Math.abs(targetTank.x - botTank.x);
+    
+    // STEP 1: Can I win right now?
+    if (this.canKillTarget(botTank, targetTank, distance)) {
+      const { angle, power } = this.calculateDirectShot(botTank, targetTank, wind);
+      return { 
+        angle, 
+        power, 
+        thinkingTime: 1200, 
+        shouldMove: null,
+        strategicReason: "Kill shot - finishing the game!" 
+      };
+    }
+
+    // STEP 2: Powerup strategy
+    const bestPowerup = this.findBestPowerup(powerups, botTank);
+    if (bestPowerup) {
+      if (this.pathClear(botTank, bestPowerup, obstacles)) {
+        return {
+          angle: 45,
+          power: 30,
+          thinkingTime: 1000,
+          shouldMove: bestPowerup.x > botTank.x ? 'right' : 'left',
+          targetPowerup: bestPowerup,
+          strategicReason: `Collecting high-value ${bestPowerup.name}`
+        };
+      } else {
+        const blocker = this.obstacleBlocking(botTank, bestPowerup, obstacles);
+        if (blocker?.destructible) {
+          const { angle, power } = this.calculateObstacleShot(botTank, blocker, wind);
+          return {
+            angle,
+            power,
+            thinkingTime: 1400,
+            shouldMove: null,
+            strategicReason: "Destroying obstacle to reach powerup"
+          };
+        }
+      }
+    }
+
+    // STEP 3: Obstacle between bot and target
+    const blocker = this.obstacleBlockingTarget(botTank, targetTank, obstacles);
+    if (blocker) {
+      if (this.providesCover(blocker, botTank, targetTank)) {
+        if (botTank.hp < targetTank.hp) {
+          return {
+            angle: 45,
+            power: 20,
+            thinkingTime: 800,
+            shouldMove: null,
+            strategicReason: "Using obstacle as cover"
+          };
+        } else {
+          const { angle, power } = this.calculateObstacleShot(botTank, blocker, wind);
+          return {
+            angle,
+            power,
+            thinkingTime: 1300,
+            shouldMove: null,
+            strategicReason: "Removing enemy cover"
+          };
+        }
+      } else {
+        const { angle, power } = this.calculateArcShot(botTank, targetTank, wind, blocker);
+        return {
+          angle,
+          power,
+          thinkingTime: 1600,
+          shouldMove: null,
+          strategicReason: "Arcing over obstacle"
+        };
+      }
+    }
+
+    // STEP 4: Close range combat
+    if (distance < 80) {
+      const { angle, power } = this.calculateDirectShot(botTank, targetTank, wind);
+      return {
+        angle,
+        power,
+        thinkingTime: 800,
+        shouldMove: null,
+        strategicReason: "Point-blank shot!"
+      };
+    }
+
+    // STEP 5: Defensive repositioning
+    if (this.highThreat(botTank, targetTank, obstacles)) {
+      const evasiveDir = this.evasiveDirection(botTank, targetTank, obstacles);
+      return {
+        angle: 35,
+        power: 40,
+        thinkingTime: 1200,
+        shouldMove: evasiveDir,
+        strategicReason: "Repositioning under fire"
+      };
+    }
+
+    // STEP 6: Default aggressive attack
+    const { angle, power } = this.calculateDirectShot(botTank, targetTank, wind);
+    return {
+      angle,
+      power,
+      thinkingTime: 1000,
+      shouldMove: null,
+      strategicReason: "Standard aggressive shot"
+    };
+  }
+
+  // === CORE HELPER METHODS FOR DECISION TREE ===
+
+  private calculateDirectShot(botTank: Tank, targetTank: Tank, wind: WindEffect): { angle: number; power: number } {
+    const distance = Math.abs(targetTank.x - botTank.x);
     const heightDiff = targetTank.y - botTank.y;
     
-    // Strategic analysis
-    const analysis = this.analyzeStrategicSituation(botTank, targetTank, powerups, obstacles);
+    const angle = this.calculateBallisticAngle(distance, heightDiff, GAME_CONSTANTS.GRAVITY);
+    let power = this.calculateBallisticPower(distance, angle, GAME_CONSTANTS.GRAVITY);
     
-    let shouldMove: 'left' | 'right' | null = null;
-    let targetPowerup: Powerup | undefined = undefined;
-    let strategicReason = "Calculating optimal shot";
-
-    // STRATEGIC DECISION TREE - Bot thinks like a human player
+    // Wind compensation
+    const windCompensation = this.calculatePreciseWindCompensation(wind, distance, angle);
+    power += windCompensation;
     
-    // Priority 1: LETHAL SHOT - If bot can finish the game, take it!
-    if (analysis.hasDirectLineOfSight && this.canKillTarget(botTank, targetTank, distance)) {
-      strategicReason = "Going for the kill shot!";
-    }
-    
-    // Priority 2: HIGH-VALUE POWERUP COLLECTION - Worth taking risks for game-changers
-    else if (analysis.nearbyPowerups.length > 0 && analysis.opportunityScore > 0.4) {
-      const bestPowerup = this.selectBestPowerup(analysis.nearbyPowerups, botTank);
-      if (bestPowerup && Math.abs(bestPowerup.x - botTank.x) > 25) {
-        shouldMove = bestPowerup.x > botTank.x ? 'right' : 'left';
-        targetPowerup = bestPowerup;
-        strategicReason = `Securing ${bestPowerup.name} - high tactical value!`;
-      }
-    }
-    
-    // Priority 3: POINT-BLANK EXECUTION - Close range, just shoot
-    else if (distance < 80 && analysis.hasDirectLineOfSight) {
-      strategicReason = "Point-blank shot - taking it!";
-    }
-    
-    // Priority 4: CLEAR TACTICAL PATH - Destroy obstacles that block good opportunities
-    else if (analysis.destructibleBlockers.length > 0 && this.shouldClearPath(botTank, targetTank, analysis)) {
-      strategicReason = "Clearing tactical path for better positioning";
-    }
-    
-    // Priority 5: THREAT EVASION - Only move if in serious danger AND not close
-    else if (analysis.threatLevel > 0.7 && distance > 120 && !analysis.hasDirectLineOfSight) {
-      shouldMove = this.calculateEvasiveMove(botTank, targetTank, obstacles);
-      strategicReason = "Tactical repositioning under fire";
-    }
-    
-    // Priority 6: AGGRESSIVE POSITIONING - Move to dominate the battlefield
-    else if (analysis.opportunityScore > analysis.threatLevel) {
-      const aggressivePosition = this.calculateAggressivePosition(botTank, targetTank, obstacles, analysis);
-      if (aggressivePosition !== 'stay') {
-        shouldMove = aggressivePosition;
-        strategicReason = "Advancing for tactical advantage";
-      }
-    }
-    
-    // Priority 7: OBSTACLE MANAGEMENT - Smart obstacle handling
-    else if (analysis.blockingObstacles.length > 0) {
-      const obstacleStrategy = this.determineObstacleStrategy(botTank, targetTank, analysis);
-      if (obstacleStrategy === 'destroy') {
-        strategicReason = "Destroying obstacle for clear shot";
-      } else if (obstacleStrategy === 'arc') {
-        strategicReason = "Arcing shot over obstacle";
-      }
-    }
-
-    // Calculate shot with advanced physics and strategic considerations
-    const { angle, power } = this.calculateAdvancedShot(botTank, targetTank, wind, obstacles, analysis);
-    
-    // Dynamic thinking time based on complexity and aggression
-    const complexity = analysis.threatLevel + (analysis.nearbyPowerups.length * 0.1) + (obstacles.length * 0.05);
-    const thinkingTime = 1500 + (complexity * 800); // 1.5-3 seconds - faster, more confident
-
     return { 
-      angle, 
-      power, 
-      thinkingTime, 
-      shouldMove, 
-      targetPowerup,
-      strategicReason 
+      angle: Math.max(5, Math.min(85, angle)), 
+      power: Math.max(15, Math.min(100, power)) 
     };
+  }
+
+  private findBestPowerup(powerups: Powerup[], botTank: Tank): Powerup | null {
+    const nearbyPowerups = powerups.filter(p => 
+      p.active && !p.collected && Math.abs(p.x - botTank.x) < 400
+    );
+    
+    return this.selectBestPowerup(nearbyPowerups, botTank);
+  }
+
+  private pathClear(botTank: Tank, powerup: Powerup, obstacles: Obstacle[]): boolean {
+    return !obstacles.some(obs => {
+      const between = (botTank.x < obs.x && obs.x < powerup.x) || 
+                     (powerup.x < obs.x && obs.x < botTank.x);
+      return between && Math.abs(obs.y - powerup.y) < 100;
+    });
+  }
+
+  private obstacleBlocking(botTank: Tank, powerup: Powerup, obstacles: Obstacle[]): Obstacle | null {
+    return obstacles.find(obs => {
+      const between = (botTank.x < obs.x && obs.x < powerup.x) || 
+                     (powerup.x < obs.x && obs.x < botTank.x);
+      return between && Math.abs(obs.y - powerup.y) < 100;
+    }) || null;
+  }
+
+  private calculateObstacleShot(botTank: Tank, obstacle: Obstacle, wind: WindEffect): { angle: number; power: number } {
+    const distance = Math.abs(obstacle.x - botTank.x);
+    const heightDiff = obstacle.y - botTank.y;
+    
+    const angle = this.calculateBallisticAngle(distance, heightDiff, GAME_CONSTANTS.GRAVITY);
+    let power = this.calculateBallisticPower(distance, angle, GAME_CONSTANTS.GRAVITY);
+    
+    // Slightly more power for obstacle destruction
+    power += 10;
+    
+    const windCompensation = this.calculatePreciseWindCompensation(wind, distance, angle);
+    power += windCompensation;
+    
+    return { 
+      angle: Math.max(5, Math.min(85, angle)), 
+      power: Math.max(20, Math.min(100, power)) 
+    };
+  }
+
+  private obstacleBlockingTarget(botTank: Tank, targetTank: Tank, obstacles: Obstacle[]): Obstacle | null {
+    return obstacles.find(obs => {
+      const between = (botTank.x < obs.x && obs.x < targetTank.x) || 
+                     (targetTank.x < obs.x && obs.x < botTank.x);
+      return between && obs.y < GAME_CONSTANTS.GROUND_Y - 50;
+    }) || null;
+  }
+
+  private providesCover(obstacle: Obstacle, botTank: Tank, targetTank: Tank): boolean {
+    // Check if obstacle provides cover for the bot
+    const obstacleBlocksReturn = (targetTank.x < obstacle.x && obstacle.x < botTank.x) || 
+                                (botTank.x < obstacle.x && obstacle.x < targetTank.x);
+    return obstacleBlocksReturn && obstacle.y < GAME_CONSTANTS.GROUND_Y - 40;
+  }
+
+  private calculateArcShot(botTank: Tank, targetTank: Tank, wind: WindEffect, obstacle: Obstacle): { angle: number; power: number } {
+    const distance = Math.abs(targetTank.x - botTank.x);
+    const heightDiff = targetTank.y - botTank.y;
+    
+    // Higher angle to arc over obstacle
+    let angle = this.calculateBallisticAngle(distance, heightDiff, GAME_CONSTANTS.GRAVITY) + 15;
+    let power = this.calculateBallisticPower(distance, angle, GAME_CONSTANTS.GRAVITY);
+    
+    // More power needed for higher arc
+    power += 15;
+    
+    const windCompensation = this.calculatePreciseWindCompensation(wind, distance, angle);
+    power += windCompensation;
+    
+    return { 
+      angle: Math.max(25, Math.min(80, angle)), 
+      power: Math.max(25, Math.min(100, power)) 
+    };
+  }
+
+  private highThreat(botTank: Tank, targetTank: Tank, obstacles: Obstacle[]): boolean {
+    const distance = Math.abs(targetTank.x - botTank.x);
+    const healthRatio = botTank.hp / targetTank.hp;
+    const hasDirectLineOfSight = !this.checkLineOfSightBlocked(botTank, targetTank, obstacles);
+    
+    // High threat if: close range + enemy has line of sight + bot is low health
+    return distance < 200 && hasDirectLineOfSight && healthRatio < 0.6;
+  }
+
+  private evasiveDirection(botTank: Tank, targetTank: Tank, obstacles: Obstacle[]): 'left' | 'right' {
+    const leftSafe = this.isDirectionSafe(botTank, 'left', obstacles);
+    const rightSafe = this.isDirectionSafe(botTank, 'right', obstacles);
+    
+    if (leftSafe && rightSafe) {
+      // Move away from target
+      return botTank.x < targetTank.x ? 'left' : 'right';
+    }
+    
+    return leftSafe ? 'left' : 'right';
   }
 
   private analyzeStrategicSituation(
