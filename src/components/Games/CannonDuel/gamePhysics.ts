@@ -169,18 +169,27 @@ export const checkCollisions = (
   };
 };
 
-export const createExplosion = (x: number, y: number, type: 'normal' | 'napalm' | 'cluster' = 'normal'): Explosion => {
+export const createExplosion = (
+  x: number, 
+  y: number, 
+  type: 'normal' | 'napalm' | 'cluster' = 'normal', 
+  damage: number = 25,
+  sourcePlayerId?: 1 | 2
+): Explosion => {
   const particles: Particle[] = [];
   let particleCount = GAME_CONSTANTS.PARTICLE_COUNT;
   let colors = [`hsl(${Math.random() * 60 + 10}, 100%, ${Math.random() * 30 + 50}%)`];
+  let radius = 50; // Base explosion radius
   
-  // Different explosion types
+  // Different explosion types with varying damage radius
   if (type === 'napalm') {
     particleCount = GAME_CONSTANTS.PARTICLE_COUNT * 1.5;
     colors = ['#ff4500', '#ff6600', '#ff8800', '#ffaa00'];
+    radius = 80; // Larger damage radius for napalm
   } else if (type === 'cluster') {
     particleCount = GAME_CONSTANTS.PARTICLE_COUNT * 0.7;
     colors = ['#ffff00', '#ffaa00', '#ff6600'];
+    radius = 60; // Medium damage radius for cluster
   }
   
   for (let i = 0; i < particleCount; i++) {
@@ -206,11 +215,14 @@ export const createExplosion = (x: number, y: number, type: 'normal' | 'napalm' 
     frame: 0,
     active: true,
     particles,
-    type: type as any
+    type: type as any,
+    damage,
+    radius,
+    sourcePlayerId
   };
 };
 
-export const createClusterExplosions = (x: number, y: number): Explosion[] => {
+export const createClusterExplosions = (x: number, y: number, damage: number = 15, sourcePlayerId?: 1 | 2): Explosion[] => {
   const explosions: Explosion[] = [];
   const clusterCount = 5;
   
@@ -218,7 +230,7 @@ export const createClusterExplosions = (x: number, y: number): Explosion[] => {
     const offsetX = (Math.random() - 0.5) * 100;
     const offsetY = (Math.random() - 0.5) * 60;
     
-    explosions.push(createExplosion(x + offsetX, y + offsetY, 'cluster'));
+    explosions.push(createExplosion(x + offsetX, y + offsetY, 'cluster', damage, sourcePlayerId));
   }
   
   return explosions;

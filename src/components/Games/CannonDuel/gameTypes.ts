@@ -35,6 +35,9 @@ export interface Explosion {
   active: boolean;
   particles: Particle[];
   type?: 'normal' | 'napalm' | 'cluster';
+  damage?: number;
+  radius?: number;
+  sourcePlayerId?: 1 | 2; // Track who caused the explosion
 }
 
 export interface Particle {

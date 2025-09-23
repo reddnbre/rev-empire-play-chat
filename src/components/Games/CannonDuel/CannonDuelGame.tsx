@@ -31,6 +31,7 @@ import {
   calculateDamageWithPowerups
 } from './powerupSystem';
 import { generateRandomObstacles, checkObstacleCollision, damageObstacle } from './TerrainObstacles';
+import { calculateExplosionDamage } from './explosionDamage';
 
 interface CannonDuelGameProps {
   onBack: () => void;
@@ -141,7 +142,13 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
               : obs
           );
           
-          const explosion = createExplosion(obstacleCollision.hitPoint!.x, obstacleCollision.hitPoint!.y, newState.projectile.explosionType || 'normal');
+          const explosion = createExplosion(
+            obstacleCollision.hitPoint!.x, 
+            obstacleCollision.hitPoint!.y, 
+            newState.projectile.explosionType || 'normal',
+            newState.projectile.damage || 25,
+            newState.currentPlayer
+          );
           newState.explosions = [...newState.explosions, explosion];
           newState.projectile = { ...updatedProjectile, active: false };
           setTimeout(() => nextTurn(), 800);
@@ -150,12 +157,19 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
           // Use projectile's explosion type or determine from properties
           const explosionType = newState.projectile.explosionType || 'normal';
           
-          const explosion = createExplosion(collision.impactPoint.x, collision.impactPoint.y, explosionType);
+          const explosion = createExplosion(
+            collision.impactPoint.x, 
+            collision.impactPoint.y, 
+            explosionType,
+            newState.projectile.damage || 25,
+            newState.currentPlayer
+          );
           newState.explosions = [...newState.explosions, explosion];
           
           // Handle cluster bombs
           if ((collision as any).shouldCreateCluster) {
-            const clusterExplosions = createClusterExplosions(collision.impactPoint.x, collision.impactPoint.y);
+            const clusterDamage = Math.floor((newState.projectile.damage || 25) * 0.6); // Cluster bombs do 60% damage each
+            const clusterExplosions = createClusterExplosions(collision.impactPoint.x, collision.impactPoint.y, clusterDamage, newState.currentPlayer);
             newState.explosions = [...newState.explosions, ...clusterExplosions];
           }
           
@@ -173,7 +187,32 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         }
       }
 
-      // Update explosions
+      // Update explosions and apply area damage
+      // First, apply area damage from new explosions (frame 0 only)
+      newState.explosions.forEach(explosion => {
+        if (explosion.frame === 0) { // Only apply damage on explosion start
+          const damageResult = calculateExplosionDamage(explosion, newState.player1Tank, newState.player2Tank);
+          
+          // Apply damage to player 1
+          if (damageResult.player1Damage > 0) {
+            newState.player1Tank = {
+              ...newState.player1Tank,
+              hp: Math.max(0, newState.player1Tank.hp - damageResult.player1Damage),
+              shield: damageResult.player1NewShield
+            };
+          }
+          
+          // Apply damage to player 2
+          if (damageResult.player2Damage > 0) {
+            newState.player2Tank = {
+              ...newState.player2Tank,
+              hp: Math.max(0, newState.player2Tank.hp - damageResult.player2Damage),
+              shield: damageResult.player2NewShield
+            };
+          }
+        }
+      });
+      
       newState.explosions = newState.explosions
         .map(updateExplosion)
         .filter(explosion => explosion.active);
