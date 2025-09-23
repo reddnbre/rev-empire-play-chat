@@ -19,13 +19,14 @@ export const POWERUP_CONFIGS: Record<PowerupType, {
     description: 'Absorbs next 50 damage',
     icon: '🛡️',
     rarity: 6,
-    duration: 3
+    duration: 5
   },
   double_shot: {
     name: 'Double Shot',
     description: 'Fire two projectiles at once',
     icon: '⚡',
-    rarity: 5
+    rarity: 5,
+    duration: 3
   },
   napalm: {
     name: 'Napalm Strike',
@@ -37,7 +38,8 @@ export const POWERUP_CONFIGS: Record<PowerupType, {
     name: 'Long Range',
     description: 'Double projectile range and speed',
     icon: '🎯',
-    rarity: 4
+    rarity: 4,
+    duration: 4
   },
   repair_kit: {
     name: 'Repair Kit',
@@ -49,7 +51,8 @@ export const POWERUP_CONFIGS: Record<PowerupType, {
     name: 'Bouncing Ball',
     description: 'Projectile bounces off surfaces',
     icon: '⚾',
-    rarity: 5
+    rarity: 5,
+    duration: 3
   },
   cluster_bomb: {
     name: 'Cluster Bomb',
@@ -68,7 +71,8 @@ export const POWERUP_CONFIGS: Record<PowerupType, {
     name: 'Armor Piercing',
     description: 'Ignores shields and deals extra damage',
     icon: '🗡️',
-    rarity: 8
+    rarity: 8,
+    duration: 3
   }
 };
 
@@ -183,8 +187,8 @@ export const applyPowerupEffect = (tank: Tank, powerup: Powerup): Tank => {
       const effectConfig = POWERUP_CONFIGS[powerup.type];
       newTank.powerups = [...newTank.powerups, {
         type: powerup.type,
-        duration: effectConfig.duration || 1,
-        remaining: effectConfig.duration || 1
+        duration: effectConfig.duration || 3, // Default 3 turns instead of 1
+        remaining: effectConfig.duration || 3
       }];
       break;
   }

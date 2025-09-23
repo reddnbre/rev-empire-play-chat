@@ -22,25 +22,33 @@ export class BotAI {
     let shouldMove: 'left' | 'right' | null = null;
     let targetPowerup: any = null;
 
-    // Check for nearby powerups (bot should collect them)
+    // Check for nearby powerups (bot should collect them strategically)
     if (powerups && powerups.length > 0) {
-      const nearbyPowerups = powerups.filter(p => 
-        p.active && !p.collected && Math.abs(p.x - botTank.x) < 200
+      const activePowerups = powerups.filter(p => p.active && !p.collected);
+      const nearbyPowerups = activePowerups.filter(p => 
+        Math.abs(p.x - botTank.x) < 250
       );
       
       if (nearbyPowerups.length > 0) {
-        // Find closest powerup
-        const closestPowerup = nearbyPowerups.reduce((closest, current) => {
+        // Prioritize rare/powerful powerups
+        const priorityPowerups = nearbyPowerups.filter(p => 
+          ['napalm', 'cluster_bomb', 'armor_piercing', 'missile'].includes(p.type)
+        );
+        
+        const targetPowerups = priorityPowerups.length > 0 ? priorityPowerups : nearbyPowerups;
+        
+        // Find closest high-value powerup
+        const closestPowerup = targetPowerups.reduce((closest, current) => {
           const closestDist = Math.abs(closest.x - botTank.x);
           const currentDist = Math.abs(current.x - botTank.x);
           return currentDist < closestDist ? current : closest;
         });
         
-        // Decide if it's worth moving to collect the powerup
         const powerupDistance = Math.abs(closestPowerup.x - botTank.x);
-        if (powerupDistance > 40 && powerupDistance < 150) {
+        if (powerupDistance > 30 && powerupDistance < 200) {
           shouldMove = closestPowerup.x > botTank.x ? 'right' : 'left';
           targetPowerup = closestPowerup;
+          console.log(`Bot targeting powerup: ${closestPowerup.name} at distance ${powerupDistance.toFixed(0)}px`);
         }
       }
     }

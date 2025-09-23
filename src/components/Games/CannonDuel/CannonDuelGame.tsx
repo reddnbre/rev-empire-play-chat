@@ -113,9 +113,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         );
       }
 
-      // Update tank powerups
-      newState.player1Tank = updateTankPowerups(newState.player1Tank);
-      newState.player2Tank = updateTankPowerups(newState.player2Tank);
+      // Tank powerups are updated only during turn transitions, not every frame
 
       // Update projectile
       if (newState.projectile.active) {
@@ -225,7 +223,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
 
   const nextTurn = useCallback(() => {
     setGameState(prevState => {
-      const newState = { 
+      let newState = { 
         ...prevState,
         currentPlayer: (prevState.currentPlayer === 1 ? 2 : 1) as 1 | 2,
         gamePhase: 'move' as const,
@@ -234,6 +232,10 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         wind: generateWind(),
         roundCount: prevState.currentPlayer === 2 ? prevState.roundCount + 1 : prevState.roundCount
       };
+      
+      // Update tank powerups only during turn transitions
+      newState.player1Tank = updateTankPowerups(newState.player1Tank);
+      newState.player2Tank = updateTankPowerups(newState.player2Tank);
       
       if (newState.gameMode === 'bot' && newState.currentPlayer === 2) {
         setTimeout(() => {
@@ -297,17 +299,27 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
 
   const botTurn = useCallback(() => {
     setGameState(prevState => {
-      const { angle, power, thinkingTime, shouldMove } = botRef.current.calculateShot(
+      const botDecision = botRef.current.calculateShot(
         prevState.player2Tank,
         prevState.player1Tank,
         prevState.wind,
         prevState.powerups
       );
+      
+      console.log('Bot AI Decision:', {
+        angle: botDecision.angle.toFixed(1),
+        power: botDecision.power.toFixed(1),
+        shouldMove: botDecision.shouldMove,
+        thinkingTime: botDecision.thinkingTime,
+        difficulty: prevState.botDifficulty,
+        windStrength: prevState.wind.strength.toFixed(2),
+        windDirection: prevState.wind.direction > 0 ? 'right' : 'left'
+      });
 
       // Handle bot movement
-      if (shouldMove) {
-        const moveAmount = 40;
-        const newX = prevState.player2Tank.x + (shouldMove === 'left' ? -moveAmount : moveAmount);
+      if (botDecision.shouldMove) {
+        const moveAmount = Math.random() * 30 + 20; // 20-50 pixel movement
+        const newX = prevState.player2Tank.x + (botDecision.shouldMove === 'left' ? -moveAmount : moveAmount);
         const clampedX = Math.max(
           GAME_CONSTANTS.CANVAS_WIDTH / 2 + 100, 
           Math.min(GAME_CONSTANTS.CANVAS_WIDTH - 50, newX)
@@ -319,28 +331,28 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
             ...prevState.player2Tank,
             x: clampedX
           },
-          angle,
-          power,
+          angle: botDecision.angle,
+          power: botDecision.power,
           gamePhase: 'aim' as const
         };
         
         // After movement, proceed with aiming
         setTimeout(() => {
           fire(); // Use existing fire function
-        }, thinkingTime);
+        }, botDecision.thinkingTime);
         
         return newState;
       } else {
         const newState = {
           ...prevState,
-          angle,
-          power,
+          angle: botDecision.angle,
+          power: botDecision.power,
           gamePhase: 'aim' as const
         };
 
         setTimeout(() => {
           fire(); // Use existing fire function
-        }, thinkingTime);
+        }, botDecision.thinkingTime);
 
         return newState;
       }
