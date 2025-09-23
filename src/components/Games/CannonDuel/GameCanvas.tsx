@@ -502,6 +502,58 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     }
   };
 
+  const drawObstacles = (ctx: CanvasRenderingContext2D, obstacles: any[]) => {
+    obstacles.forEach(obstacle => {
+      if (obstacle.hp <= 0) return; // Don't draw destroyed obstacles
+      
+      // Damage effect - reduce opacity based on health
+      const healthPercent = obstacle.hp / obstacle.maxHp;
+      ctx.globalAlpha = Math.max(0.3, healthPercent);
+      
+      // Obstacle colors based on type
+      const colors = {
+        wall: '#8B7355',
+        bunker: '#4A4A4A',
+        rock: '#6B7280',
+        building: '#DC2626'
+      };
+      
+      // Draw obstacle with gradient
+      const gradient = ctx.createLinearGradient(
+        obstacle.x, obstacle.y,
+        obstacle.x + obstacle.width, obstacle.y + obstacle.height
+      );
+      const baseColor = colors[obstacle.type] || '#6B7280';
+      gradient.addColorStop(0, baseColor);
+      gradient.addColorStop(0.5, '#FFFFFF40');
+      gradient.addColorStop(1, baseColor);
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      
+      // Border
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      
+      // Health bar for damaged obstacles
+      if (healthPercent < 1) {
+        const barWidth = obstacle.width;
+        const barHeight = 4;
+        const barX = obstacle.x;
+        const barY = obstacle.y - 10;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        ctx.fillStyle = healthPercent > 0.5 ? '#22C55E' : '#EF4444';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+      }
+      
+      ctx.globalAlpha = 1;
+    });
+  };
+
   const draw = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -512,6 +564,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     ctx.clearRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
 
     drawBackground(ctx);
+    drawObstacles(ctx, gameState.obstacles);
     drawWindIndicator(ctx, gameState.wind);
     drawTank(ctx, gameState.player1Tank, gameState.currentPlayer === 1 ? gameState.angle : 45);
     drawTank(ctx, gameState.player2Tank, gameState.currentPlayer === 2 ? gameState.angle : 45);
@@ -528,9 +581,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ gameState, className }) 
     const animate = () => {
       draw();
       animationId = requestAnimationFrame(animate);
-    };
-    
-    animationId = requestAnimationFrame(animate);
     
     return () => {
       if (animationId) {

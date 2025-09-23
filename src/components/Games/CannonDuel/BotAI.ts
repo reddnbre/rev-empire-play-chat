@@ -14,9 +14,45 @@ export class BotAI {
     this.difficulty = difficulty;
   }
 
-  calculateShot(botTank: Tank, targetTank: Tank, wind: WindEffect): { angle: number; power: number; thinkingTime: number } {
+  calculateShot(botTank: Tank, targetTank: Tank, wind: WindEffect, powerups?: any[]): { angle: number; power: number; thinkingTime: number; shouldMove?: 'left' | 'right' | null; targetPowerup?: any } {
     const distance = Math.abs(targetTank.x - botTank.x);
     const heightDiff = targetTank.y - botTank.y;
+
+    // Strategic decision making
+    let shouldMove: 'left' | 'right' | null = null;
+    let targetPowerup: any = null;
+
+    // Check for nearby powerups (bot should collect them)
+    if (powerups && powerups.length > 0) {
+      const nearbyPowerups = powerups.filter(p => 
+        p.active && !p.collected && Math.abs(p.x - botTank.x) < 200
+      );
+      
+      if (nearbyPowerups.length > 0) {
+        // Find closest powerup
+        const closestPowerup = nearbyPowerups.reduce((closest, current) => {
+          const closestDist = Math.abs(closest.x - botTank.x);
+          const currentDist = Math.abs(current.x - botTank.x);
+          return currentDist < closestDist ? current : closest;
+        });
+        
+        // Decide if it's worth moving to collect the powerup
+        const powerupDistance = Math.abs(closestPowerup.x - botTank.x);
+        if (powerupDistance > 40 && powerupDistance < 150) {
+          shouldMove = closestPowerup.x > botTank.x ? 'right' : 'left';
+          targetPowerup = closestPowerup;
+        }
+      }
+    }
+
+    // Strategic positioning - avoid being too close or in predictable spots
+    if (!shouldMove && distance < 150 && this.difficulty !== 'easy') {
+      // Move away if too close for comfort
+      shouldMove = botTank.x < targetTank.x ? 'left' : 'right';
+    } else if (!shouldMove && distance > 600 && this.difficulty === 'hard') {
+      // Move closer for better accuracy on hard difficulty
+      shouldMove = botTank.x < targetTank.x ? 'right' : 'left';
+    }
 
     let angle: number;
     let power: number;
@@ -60,7 +96,7 @@ export class BotAI {
       this.shotHistory.shift();
     }
 
-    return { angle, power, thinkingTime };
+    return { angle, power, thinkingTime, shouldMove, targetPowerup };
   }
 
   private calculateEasyShot(distance: number, heightDiff: number): number {

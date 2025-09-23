@@ -30,12 +30,14 @@ import {
   modifyProjectileWithPowerups,
   calculateDamageWithPowerups
 } from './powerupSystem';
+import { generateRandomObstacles, checkObstacleCollision, damageObstacle } from './TerrainObstacles';
 
 interface CannonDuelGameProps {
   onBack: () => void;
+  initialGameMode?: 'pvp' | 'bot';
 }
 
-export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
+export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialGameMode = 'pvp' }) => {
   const animationRef = useRef<number>();
   const botRef = useRef<BotAI>(createBotAI('medium'));
   const { playMove, playWin, playLose } = useSoundEffects();
@@ -44,7 +46,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
   const [gameState, setGameState] = useState<GameState>({
     currentPlayer: 1,
     gamePhase: 'move',
-    gameMode: 'pvp',
+    gameMode: initialGameMode,
     botDifficulty: 'medium',
     player1Tank: {
       x: 80,
@@ -75,10 +77,12 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
     angle: 45,
     power: 50,
     winner: null,
-    player2Joined: false,
+    player2Joined: initialGameMode === 'bot',
     roundCount: 1,
     powerups: [],
-    activePowerup: null
+    activePowerup: null,
+    obstacles: generateRandomObstacles(GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.GROUND_Y),
+    inLobby: false
   });
 
   // Game loop
@@ -126,7 +130,23 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
 
         const collision = checkCollisions(updatedProjectile, newState.player1Tank, newState.player2Tank);
         
-        if (collision.hitGround || collision.hitTank) {
+        // Check obstacle collisions
+        const obstacleCollision = checkObstacleCollision(updatedProjectile.x, updatedProjectile.y, newState.obstacles);
+        
+        if (obstacleCollision.hit && obstacleCollision.obstacle) {
+          // Damage obstacle
+          newState.obstacles = newState.obstacles.map(obs => 
+            obs.id === obstacleCollision.obstacle!.id 
+              ? damageObstacle(obs, 25) 
+              : obs
+          );
+          
+          const explosion = createExplosion(obstacleCollision.hitPoint!.x, obstacleCollision.hitPoint!.y, 'normal');
+          newState.explosions = [...newState.explosions, explosion];
+          newState.projectile = { ...updatedProjectile, active: false };
+          setTimeout(() => nextTurn(), 800);
+          playMove();
+        } else if (collision.hitGround || collision.hitTank) {
           // Determine explosion type based on projectile properties
           let explosionType: 'normal' | 'napalm' | 'cluster' = 'normal';
           if ((updatedProjectile as any).napalm) explosionType = 'napalm';
@@ -244,55 +264,55 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
 
   const botTurn = useCallback(() => {
     setGameState(prevState => {
-      const { angle, power, thinkingTime } = botRef.current.calculateShot(
+      const { angle, power, thinkingTime, shouldMove } = botRef.current.calculateShot(
         prevState.player2Tank,
         prevState.player1Tank,
-        prevState.wind
+        prevState.wind,
+        prevState.powerups
       );
 
-      const newState = {
-        ...prevState,
-        angle,
-        power,
-        gamePhase: 'aim' as const
-      };
+      // Handle bot movement
+      if (shouldMove) {
+        const moveAmount = 40;
+        const newX = prevState.player2Tank.x + (shouldMove === 'left' ? -moveAmount : moveAmount);
+        const clampedX = Math.max(
+          GAME_CONSTANTS.CANVAS_WIDTH / 2 + 100, 
+          Math.min(GAME_CONSTANTS.CANVAS_WIDTH - 50, newX)
+        );
+        
+        const newState = {
+          ...prevState,
+          player2Tank: {
+            ...prevState.player2Tank,
+            x: clampedX
+          },
+          angle,
+          power,
+          gamePhase: 'aim' as const
+        };
+        
+        // After movement, proceed with aiming
+        setTimeout(() => {
+          fire(); // Use existing fire function
+        }, thinkingTime);
+        
+        return newState;
+      } else {
+        const newState = {
+          ...prevState,
+          angle,
+          power,
+          gamePhase: 'aim' as const
+        };
 
-      setTimeout(() => {
-        setGameState(currentState => {
-          const currentTank = currentState.currentPlayer === 1 ? currentState.player1Tank : currentState.player2Tank;
-          const targetTank = currentState.currentPlayer === 1 ? currentState.player2Tank : currentState.player1Tank;
-          const radians = (currentState.angle * Math.PI) / 180;
-          const velocity = currentState.power / 8;
-          const direction = currentState.currentPlayer === 1 ? 1 : -1;
-          
-          const barrelOffset = 25;
-          const spawnX = currentTank.x + Math.cos(radians) * barrelOffset * direction;
-          const spawnY = currentTank.y + GAME_CONSTANTS.TANK_SIZE / 2 - Math.sin(radians) * barrelOffset;
-          
-          const baseProjectile = {
-            x: spawnX,
-            y: spawnY,
-            vx: velocity * Math.cos(radians) * direction,
-            vy: -velocity * Math.sin(radians),
-            active: true,
-            trail: []
-          };
+        setTimeout(() => {
+          fire(); // Use existing fire function
+        }, thinkingTime);
 
-          const projectiles = modifyProjectileWithPowerups(baseProjectile, currentTank, targetTank);
-          
-          playMove();
-          
-          return {
-            ...currentState,
-            projectile: projectiles[0], // Use main projectile for now
-            gamePhase: 'firing' as const
-          };
-        });
-      }, thinkingTime);
-
-      return newState;
+        return newState;
+      }
     });
-  }, [playMove]);
+  }, []);
 
   const moveTank = useCallback((direction: 'left' | 'right') => {
     if (gameState.gamePhase !== 'move') return;
@@ -394,10 +414,12 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
       angle: 45,
       power: 50,
       winner: null,
-      player2Joined: false,
+      player2Joined: prevState.gameMode === 'bot',
       roundCount: 1,
       powerups: [],
-      activePowerup: null
+      activePowerup: null,
+      obstacles: generateRandomObstacles(GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.GROUND_Y),
+      inLobby: false
     }));
     setShowResult(false);
     botRef.current.reset();
@@ -451,28 +473,33 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack }) => {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-4">
-      <GameControls
-        gameState={gameState}
-        onBack={onBack}
-        onGameModeChange={handleGameModeChange}
-        onBotDifficultyChange={handleBotDifficultyChange}
-        onMoveTank={moveTank}
-        onStartAiming={startAiming}
-        onAngleChange={handleAngleChange}
-        onPowerChange={handlePowerChange}
-        onFire={fire}
-        onNewGame={resetGame}
-      />
+      <div className="flex gap-4">
+        {/* Game Canvas */}
+        <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700 flex-1">
+          <CardContent className="p-6">
+            <GameCanvas
+              gameState={gameState}
+              className="border-2 border-slate-600 rounded-xl shadow-2xl w-full max-w-full h-auto bg-slate-900"
+            />
+          </CardContent>
+        </Card>
 
-      {/* Game Canvas */}
-      <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700">
-        <CardContent className="p-6">
-          <GameCanvas
+        {/* Controls Panel */}
+        <div className="w-80 flex-shrink-0">
+          <GameControls
             gameState={gameState}
-            className="border-2 border-slate-600 rounded-xl shadow-2xl w-full max-w-full h-auto bg-slate-900"
+            onBack={onBack}
+            onGameModeChange={handleGameModeChange}
+            onBotDifficultyChange={handleBotDifficultyChange}
+            onMoveTank={moveTank}
+            onStartAiming={startAiming}
+            onAngleChange={handleAngleChange}
+            onPowerChange={handlePowerChange}
+            onFire={fire}
+            onNewGame={resetGame}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Game Result Dialog */}
       <GameResultDialog

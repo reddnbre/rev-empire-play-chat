@@ -95,6 +95,18 @@ export type GamePhase = 'move' | 'aim' | 'firing' | 'finished';
 export type GameMode = 'pvp' | 'bot';
 export type BotDifficulty = 'easy' | 'medium' | 'hard';
 
+export interface Obstacle {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  hp: number;
+  maxHp: number;
+  type: 'wall' | 'bunker' | 'rock' | 'building';
+  destructible: boolean;
+}
+
 export interface GameState {
   currentPlayer: 1 | 2;
   gamePhase: GamePhase;
@@ -112,6 +124,8 @@ export interface GameState {
   roundCount: number;
   powerups: Powerup[];
   activePowerup: PowerupType | null;
+  obstacles: Obstacle[];
+  inLobby: boolean;
 }
 
 export interface GameConstants {
