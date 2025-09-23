@@ -215,20 +215,6 @@ export const modifyProjectileWithPowerups = (
   // Base damage from projectile or default
   let damage = projectile.damage || 25;
   let explosionType = projectile.explosionType || 'normal';
-  let projectileType: import('./gameTypes').ProjectileType = 'basic';
-  
-  // Powerup stacking - combine all active powerups
-  const combinedEffects = {
-    damageMultiplier: 1,
-    velocityMultiplier: 1,
-    hasHoming: false,
-    hasBouncing: false,
-    hasArmorPiercing: false,
-    hasNapalm: false,
-    hasCluster: false,
-    extraProjectiles: [] as Projectile[],
-    visualEffects: [] as string[]
-  };
   
   // Set trail colors and effects based on powerups
   const powerupColors: Record<PowerupType, string> = {
@@ -244,115 +230,75 @@ export const modifyProjectileWithPowerups = (
     armor_piercing: 'rgba(107, 114, 128' // Gray
   };
   
-  // Process all powerups - STACK THEIR EFFECTS!
+  // Apply powerup effects
   for (const powerup of tank.powerups) {
-    combinedEffects.visualEffects.push(powerup.type);
-    
     switch (powerup.type) {
       case 'double_shot':
-        // Create additional projectile
-        const extraProjectile = {
+        damage *= 0.8; // Slightly reduce individual shot damage
+        // Set special color for double shot
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.double_shot }));
+        
+        // Create second projectile with slight angle difference
+        const secondProjectile = {
           ...mainProjectile,
-          vx: mainProjectile.vx * 0.95,
-          vy: mainProjectile.vy * 0.95 + 0.3,
-          trail: []
+          vx: mainProjectile.vx * 0.9,
+          vy: mainProjectile.vy * 0.9 + 0.5,
+          damage: damage,
+          trail: mainProjectile.trail.map(p => ({ ...p, color: powerupColors.double_shot }))
         };
-        combinedEffects.extraProjectiles.push(extraProjectile);
+        projectiles.push(secondProjectile);
         break;
         
       case 'long_shot':
-        combinedEffects.velocityMultiplier *= 1.5;
-        combinedEffects.damageMultiplier *= 1.1;
+        mainProjectile.vx *= 1.5;
+        mainProjectile.vy *= 1.5;
+        damage *= 1.1; // Slightly more damage for longer range
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.long_shot }));
         break;
         
       case 'missile':
-        combinedEffects.hasHoming = true;
+        // Add homing behavior (will be handled in physics)
+        (mainProjectile as any).homing = true;
         (mainProjectile as any).target = targetTank;
-        projectileType = 'missile';
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.missile }));
         break;
         
       case 'bounce_shot':
-        combinedEffects.hasBouncing = true;
         (mainProjectile as any).bounces = 3;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.bounce_shot }));
         break;
         
       case 'cluster_bomb':
-        combinedEffects.hasCluster = true;
-        combinedEffects.damageMultiplier *= 0.85; // Slightly reduce main damage since clusters add more
+        (mainProjectile as any).cluster = true;
+        damage *= 0.7; // Individual cluster damage is lower
         explosionType = 'cluster';
-        projectileType = 'cluster';
-        break;
-        
-      case 'napalm':
-        combinedEffects.hasNapalm = true;
-        combinedEffects.damageMultiplier *= 1.3;
-        explosionType = 'napalm';
-        projectileType = 'napalm';
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.cluster_bomb }));
         break;
         
       case 'armor_piercing':
-        combinedEffects.hasArmorPiercing = true;
-        combinedEffects.damageMultiplier *= 1.5;
-        projectileType = 'plasma';
+        (mainProjectile as any).armorPiercing = true;
+        damage *= 1.5; // Significantly more damage
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.armor_piercing }));
+        break;
+        
+      case 'napalm':
+        (mainProjectile as any).napalm = true;
+        damage *= 1.3; // More damage
+        explosionType = 'napalm';
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.napalm }));
         break;
         
       case 'laser_sight':
-        // Perfect accuracy - no effect on projectile mechanics
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.laser_sight }));
         break;
     }
   }
   
-  // Apply combined velocity effects
-  mainProjectile.vx *= combinedEffects.velocityMultiplier;
-  mainProjectile.vy *= combinedEffects.velocityMultiplier;
-  
-  // Apply combined damage
-  damage *= combinedEffects.damageMultiplier;
-  
-  // Set combined special properties
-  if (combinedEffects.hasHoming) (mainProjectile as any).homing = true;
-  if (combinedEffects.hasBouncing) (mainProjectile as any).bounces = 3;
-  if (combinedEffects.hasArmorPiercing) (mainProjectile as any).armorPiercing = true;
-  if (combinedEffects.hasNapalm) (mainProjectile as any).napalm = true;
-  if (combinedEffects.hasCluster) (mainProjectile as any).cluster = true;
-  
-  // Create mixed trail color if multiple powerups
-  let trailColor = 'rgba(255, 107, 53'; // Default orange
-  if (combinedEffects.visualEffects.length > 0) {
-    if (combinedEffects.visualEffects.length === 1) {
-      trailColor = powerupColors[combinedEffects.visualEffects[0] as PowerupType];
-    } else {
-      // Mix colors for multiple powerups - create rainbow effect
-      trailColor = 'rgba(255, 255, 255'; // White for multiple effects
-    }
-  }
-  
-  // Apply trail colors
-  mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: trailColor }));
-  
-  // Apply to extra projectiles too
-  combinedEffects.extraProjectiles.forEach(proj => {
-    proj.damage = damage * 0.8; // Extra projectiles do slightly less damage
-    proj.explosionType = explosionType;
-    proj.projectileType = projectileType;
-    proj.trail = proj.trail.map(p => ({ ...p, color: trailColor }));
-    
-    // Copy all special properties to extra projectiles
-    if (combinedEffects.hasHoming) (proj as any).homing = true;
-    if (combinedEffects.hasBouncing) (proj as any).bounces = 3;
-    if (combinedEffects.hasArmorPiercing) (proj as any).armorPiercing = true;
-    if (combinedEffects.hasNapalm) (proj as any).napalm = true;
-    if (combinedEffects.hasCluster) (proj as any).cluster = true;
-  });
-  
-  // Apply final properties to main projectile
+  // Apply final damage and explosion type to main projectile
   mainProjectile.damage = damage;
   mainProjectile.explosionType = explosionType;
-  mainProjectile.projectileType = projectileType;
   
-  // Add all projectiles to the array
-  projectiles.push(mainProjectile, ...combinedEffects.extraProjectiles);
-  
+  projectiles.unshift(mainProjectile);
   return projectiles;
 };
 

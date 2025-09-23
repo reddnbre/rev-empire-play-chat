@@ -40,20 +40,8 @@ interface CannonDuelGameProps {
 
 export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialGameMode = 'pvp' }) => {
   const animationRef = useRef<number>();
-  const botRef = useRef<BotAI>(createBotAI());
-  const { 
-    playMove, 
-    playWin, 
-    playLose, 
-    playCannonFire, 
-    playMissileLaunch, 
-    playPlasmaShot, 
-    playClusterBomb, 
-    playNapalmFire,
-    playExplosion,
-    playNapalmExplosion,
-    playClusterExplosion
-  } = useSoundEffects();
+  const botRef = useRef<BotAI>(createBotAI('medium'));
+  const { playMove, playWin, playLose } = useSoundEffects();
 
   const [showResult, setShowResult] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
@@ -160,19 +148,6 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
             newState.currentPlayer
           );
           newState.explosions = [...newState.explosions, explosion];
-          
-          // Play appropriate explosion sound
-          const explosionType = newState.projectile.explosionType || 'normal';
-          switch (explosionType) {
-            case 'napalm':
-              playNapalmExplosion();
-              break;
-            case 'cluster':
-              playClusterExplosion();
-              break;
-            default:
-              playExplosion();
-          }
           newState.projectile = { ...updatedProjectile, active: false };
           setTimeout(() => nextTurn(), 800);
           playMove();
@@ -189,18 +164,6 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
           );
           newState.explosions = [...newState.explosions, explosion];
           
-          // Play appropriate explosion sound
-          switch (explosionType) {
-            case 'napalm':
-              playNapalmExplosion();
-              break;
-            case 'cluster':
-              playClusterExplosion();
-              break;
-            default:
-              playExplosion();
-          }
-          
           // Handle cluster bombs
           if ((collision as any).shouldCreateCluster) {
             const clusterDamage = Math.floor((newState.projectile.damage || 25) * 0.6); // Cluster bombs do 60% damage each
@@ -211,20 +174,8 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
           newState.projectile = { ...updatedProjectile, active: false };
           
           if (collision.hitTank) {
-            // Bot learning - record hit
-            if (newState.currentPlayer === 2) {
-              const distance = Math.abs(newState.player2Tank.x - newState.player1Tank.x);
-              botRef.current.recordShotResult(distance, newState.angle, 'hit');
-            }
             setTimeout(() => handleDamagePlayer(collision.hitTank!.id as 1 | 2), 200);
           } else {
-            // Bot learning - record miss or close
-            if (newState.currentPlayer === 2) {
-              const distance = Math.abs(newState.player2Tank.x - newState.player1Tank.x);
-              const hitDistance = Math.abs(collision.impactPoint.x - (collision.hitTank ? collision.hitTank.x : newState.player1Tank.x));
-              const result = hitDistance < 50 ? 'close' : 'miss';
-              botRef.current.recordShotResult(distance, newState.angle, result);
-            }
             setTimeout(() => nextTurn(), 800);
           }
           
@@ -352,8 +303,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         prevState.player2Tank,
         prevState.player1Tank,
         prevState.wind,
-        prevState.powerups,
-        prevState.obstacles
+        prevState.powerups
       );
       
       console.log('Bot AI Decision:', {
@@ -361,7 +311,9 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
         power: botDecision.power.toFixed(1),
         shouldMove: botDecision.shouldMove,
         thinkingTime: botDecision.thinkingTime,
-        strategicReason: botDecision.strategicReason
+        difficulty: prevState.botDifficulty,
+        windStrength: prevState.wind.strength.toFixed(2),
+        windDirection: prevState.wind.direction > 0 ? 'right' : 'left'
       });
 
       // Handle bot movement
@@ -466,24 +418,7 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
 
       const projectiles = modifyProjectileWithPowerups(baseProjectile, currentTank, targetTank);
       
-      // Play appropriate firing sound based on projectile type
-      const projectileType = projectiles[0]?.projectileType || 'basic';
-      switch (projectileType) {
-        case 'missile':
-          playMissileLaunch();
-          break;
-        case 'plasma':
-          playPlasmaShot();
-          break;
-        case 'cluster':
-          playClusterBomb();
-          break;
-        case 'napalm':
-          playNapalmFire();
-          break;
-        default:
-          playCannonFire();
-      }
+      playMove();
       
       return {
         ...prevState,
@@ -546,8 +481,8 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
   }, []);
 
   const handleBotDifficultyChange = useCallback((difficulty: BotDifficulty) => {
-    // Bot is now always strategic - no difficulty levels
-    setGameState(prevState => ({ ...prevState, botDifficulty: 'hard' }));
+    setGameState(prevState => ({ ...prevState, botDifficulty: difficulty }));
+    botRef.current.setDifficulty(difficulty);
   }, []);
 
   const handleAngleChange = useCallback((angle: number[]) => {

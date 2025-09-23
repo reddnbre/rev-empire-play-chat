@@ -15,8 +15,6 @@ export interface TrailPoint {
   color?: string;
 }
 
-export type ProjectileType = 'basic' | 'missile' | 'plasma' | 'cluster' | 'napalm';
-
 export interface Projectile {
   x: number;
   y: number;
@@ -28,7 +26,6 @@ export interface Projectile {
   framesSinceFired?: number; // Safety frames
   damage?: number; // Custom damage
   explosionType?: 'normal' | 'napalm' | 'cluster';
-  projectileType?: ProjectileType; // Visual type for rendering
 }
 
 export interface Explosion {
