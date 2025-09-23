@@ -208,15 +208,33 @@ export const modifyProjectileWithPowerups = (
   const projectiles: Projectile[] = [];
   let mainProjectile = { ...projectile };
   
+  // Set trail colors and effects based on powerups
+  const powerupColors: Record<PowerupType, string> = {
+    missile: 'rgba(255, 107, 53',     // Orange
+    shield: 'rgba(59, 130, 246',      // Blue
+    double_shot: 'rgba(245, 158, 11', // Yellow
+    napalm: 'rgba(239, 68, 68',       // Red
+    long_shot: 'rgba(16, 185, 129',   // Green
+    repair_kit: 'rgba(34, 197, 94',   // Light Green
+    bounce_shot: 'rgba(139, 92, 246', // Purple
+    cluster_bomb: 'rgba(220, 38, 38', // Dark Red
+    laser_sight: 'rgba(236, 72, 153', // Pink
+    armor_piercing: 'rgba(107, 114, 128' // Gray
+  };
+  
+  // Apply powerup effects
   for (const powerup of tank.powerups) {
     switch (powerup.type) {
       case 'double_shot':
+        // Set special color for double shot
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.double_shot }));
+        
         // Create second projectile with slight angle difference
         const secondProjectile = {
           ...mainProjectile,
           vx: mainProjectile.vx * 0.9,
           vy: mainProjectile.vy * 0.9 + 0.5,
-          trail: []
+          trail: mainProjectile.trail.map(p => ({ ...p, color: powerupColors.double_shot }))
         };
         projectiles.push(secondProjectile);
         break;
@@ -224,28 +242,38 @@ export const modifyProjectileWithPowerups = (
       case 'long_shot':
         mainProjectile.vx *= 1.5;
         mainProjectile.vy *= 1.5;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.long_shot }));
         break;
         
       case 'missile':
         // Add homing behavior (will be handled in physics)
         (mainProjectile as any).homing = true;
         (mainProjectile as any).target = targetTank;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.missile }));
         break;
         
       case 'bounce_shot':
         (mainProjectile as any).bounces = 3;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.bounce_shot }));
         break;
         
       case 'cluster_bomb':
         (mainProjectile as any).cluster = true;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.cluster_bomb }));
         break;
         
       case 'armor_piercing':
         (mainProjectile as any).armorPiercing = true;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.armor_piercing }));
         break;
         
       case 'napalm':
         (mainProjectile as any).napalm = true;
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.napalm }));
+        break;
+        
+      case 'laser_sight':
+        mainProjectile.trail = mainProjectile.trail.map(p => ({ ...p, color: powerupColors.laser_sight }));
         break;
     }
   }

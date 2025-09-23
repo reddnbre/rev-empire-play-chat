@@ -115,6 +115,7 @@ export interface GameState {
   player1Tank: Tank;
   player2Tank: Tank;
   projectile: Projectile;
+  projectiles?: Projectile[]; // Multiple projectiles for double shot
   explosions: Explosion[];
   wind: WindEffect;
   angle: number;

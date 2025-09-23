@@ -64,11 +64,12 @@ export const updateProjectilePhysics = (
   }
 
   // Update trail with special colors for different projectile types
-  let trailColor = 'rgba(255, 255, 255, ';
-  if ((projectile as any).homing) trailColor = 'rgba(255, 0, 0, ';
-  if ((projectile as any).napalm) trailColor = 'rgba(255, 165, 0, ';
-  if ((projectile as any).cluster) trailColor = 'rgba(255, 255, 0, ';
-  if ((projectile as any).armorPiercing) trailColor = 'rgba(128, 0, 255, ';
+  let trailColor = 'rgba(255, 255, 255';
+  if ((projectile as any).homing) trailColor = 'rgba(255, 107, 53';
+  if ((projectile as any).napalm) trailColor = 'rgba(239, 68, 68';
+  if ((projectile as any).cluster) trailColor = 'rgba(220, 38, 38';
+  if ((projectile as any).armorPiercing) trailColor = 'rgba(107, 114, 128';
+  if ((projectile as any).bounces > 0) trailColor = 'rgba(139, 92, 246';
 
   const newTrail = [
     { x: projectile.x, y: projectile.y, alpha: 1.0, color: trailColor },

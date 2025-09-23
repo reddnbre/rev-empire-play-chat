@@ -373,7 +373,8 @@ export const CannonDuelGame: React.FC<CannonDuelGameProps> = ({ onBack, initialG
       
       return {
         ...prevState,
-        projectile: projectiles[0], // Use main projectile for now
+        projectile: projectiles[0],
+        projectiles: projectiles, // Store all projectiles
         gamePhase: 'firing' as const
       };
     });
