@@ -6,10 +6,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Send, Users, Clock, Smile, Mic, MicOff, Paperclip, Image, RotateCcw } from "lucide-react";
+import { Send, Users, Clock, Smile, Mic, MicOff, Paperclip, Image, RotateCcw, Bell, BellOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface Message {
   id: string;
@@ -44,6 +45,32 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const { permission, supported, requestPermission, showNotification } = useNotifications();
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (permission === 'default') {
+        toast({
+          title: "Enable notifications",
+          description: "Get notified when someone sends you a message",
+          action: (
+            <Button
+              size="sm"
+              onClick={requestPermission}
+              className="flex items-center gap-1"
+            >
+              <Bell className="h-3 w-3" />
+              Enable
+            </Button>
+          ),
+          duration: 8000,
+        });
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [permission, requestPermission]);
 
   // Show landscape hint for mobile users
   useEffect(() => {
@@ -94,7 +121,25 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
             expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
           };
           
-          setMessages(prev => [...prev, message]);
+          setMessages(prev => {
+            const newMessages = [...prev, message];
+            
+            // Show notification for incoming messages (not from current user)
+            const currentUserId = currentUser?.id || 'guest';
+            const currentUsername = currentUser ? (currentUser.email?.split('@')[0] || 'User') : guestName || 'Guest';
+            
+            if (message.user_id !== currentUserId && message.username !== currentUsername) {
+              showNotification(
+                `${message.username} sent a message`,
+                {
+                  body: message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
+                  tag: 'chat-message'
+                }
+              );
+            }
+            
+            return newMessages;
+          });
         }, 1500 + Math.random() * 2000);
       }
     }, 3000);
@@ -260,6 +305,19 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
         <div className="flex items-center justify-between">
           <h3 className="text-base md:text-lg font-semibold">Global Chat</h3>
           <div className="flex items-center gap-1 md:gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={requestPermission}
+              className="h-6 w-6 p-0"
+              title={permission === 'granted' ? 'Notifications enabled' : 'Enable notifications'}
+            >
+              {permission === 'granted' ? (
+                <Bell className="h-3 w-3 text-green-500" />
+              ) : (
+                <BellOff className="h-3 w-3 text-muted-foreground" />
+              )}
+            </Button>
             <Badge variant="secondary" className="flex items-center gap-1 text-xs">
               <Users className="h-3 w-3" />
               <span className="hidden sm:inline">{onlineUsers || 1}</span>
