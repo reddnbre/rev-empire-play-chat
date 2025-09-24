@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCookieConsent } from "@/hooks/useCookieConsent";
 
 // Components
 import Header from "@/components/Layout/Header";
@@ -14,6 +15,7 @@ import GamesList from "@/components/Games/GamesList";
 import AdminPanel from "@/components/Admin/AdminPanel";
 import AdBanner from "@/components/Ads/AdBanner";
 import GuestNameInput from "@/components/Chat/GuestNameInput";
+import { CookieConsent } from "@/components/Layout/CookieConsent";
 
 // Games
 import TicTacToe from "@/components/Games/TicTacToe";
@@ -44,6 +46,7 @@ const Index = () => {
   const [showNameInput, setShowNameInput] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { hasConsent } = useCookieConsent();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -330,6 +333,23 @@ const Index = () => {
 
       {/* Popup Ad */}
       <AdBanner position="popup" />
+      
+      {/* Cookie Consent Banner */}
+      <CookieConsent 
+        onConsentChange={(consent) => {
+          if (consent) {
+            toast({
+              title: "Cookies Accepted",
+              description: "Your session will now be saved using cookies for better experience.",
+            });
+          } else {
+            toast({
+              title: "Cookies Declined", 
+              description: "Using browser storage instead. You can change this in settings.",
+            });
+          }
+        }}
+      />
     </div>
   );
 };
