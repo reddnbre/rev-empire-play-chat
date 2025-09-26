@@ -7,25 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Send, Users, Clock, Smile, Mic, MicOff, Paperclip, Image, RotateCcw, Bell, BellOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useMultiplayerChat } from "@/hooks/useMultiplayerChat";
 
-interface Message {
-  id: string;
-  user_id: string;
-  username: string;
-  content: string;
-  created_at: string;
-  expires_at: string;
-  reactions?: Record<string, string[]>; // emoji -> user_ids
-  attachment?: {
-    type: 'image' | 'gif';
-    url: string;
-    name: string;
-  };
-}
 
 interface ChatInterfaceProps {
   currentUser: any;
@@ -34,18 +20,22 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [onlineUsers, setOnlineUsers] = useState<number>(0);
   const [isRecording, setIsRecording] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
-  const [someoneTyping, setSomeoneTyping] = useState(false);
   const [showLandscapeHint, setShowLandscapeHint] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   const { permission, supported, requestPermission, showNotification } = useNotifications();
+  
+  // Use the multiplayer chat hook
+  const { messages, onlineUsers, sendMessage: sendChatMessage, addReaction } = useMultiplayerChat({
+    currentUser,
+    guestName,
+    onNotification: showNotification
+  });
 
   // Request notification permission on component mount
   useEffect(() => {
@@ -95,88 +85,12 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
     }
   }, [messages]);
 
-  // Simulate real-time messages and typing indicators
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() < 0.1) {
-        // Show typing indicator first
-        setSomeoneTyping(true);
-        
-        setTimeout(() => {
-          setSomeoneTyping(false);
-          const responses = [
-            "Hey everyone! 👋",
-            "Anyone want to play a game?",
-            "Good luck in your matches!",
-            "This chat is awesome! 🎮",
-            "Just finished an epic game!",
-            "Looking for teammates 🎯"
-          ];
-          const message: Message = {
-            id: Math.random().toString(),
-            user_id: `player_${Math.floor(Math.random() * 1000)}`,
-            username: `Player${Math.floor(Math.random() * 1000)}`,
-            content: responses[Math.floor(Math.random() * responses.length)],
-            created_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
-          };
-          
-          setMessages(prev => {
-            const newMessages = [...prev, message];
-            
-            // Show notification for incoming messages (not from current user)
-            const currentUserId = currentUser?.id || 'guest';
-            const currentUsername = currentUser ? (currentUser.email?.split('@')[0] || 'User') : guestName || 'Guest';
-            
-            if (message.user_id !== currentUserId && message.username !== currentUsername) {
-              showNotification(
-                `${message.username} sent a message`,
-                {
-                  body: message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
-                  tag: 'chat-message'
-                }
-              );
-            }
-            
-            return newMessages;
-          });
-        }, 1500 + Math.random() * 2000);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    try {
-      // For demo purposes, we'll simulate real-time chat with local state
-      // In production, you'd insert into a messages table and use Supabase realtime
-      const message: Message = {
-        id: Math.random().toString(),
-        user_id: currentUser?.id || 'guest',
-        username: currentUser ? (currentUser.email?.split('@')[0] || 'User') : guestName || 'Guest',
-        content: newMessage.trim(),
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours
-      };
-
-      setMessages(prev => [...prev, message]);
-      setNewMessage("");
-
-      toast({
-        title: "Message sent",
-        description: "Your message will auto-delete in 8 hours.",
-      });
-    } catch (error) {
-      toast({
-        title: "Failed to send message",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
+    await sendChatMessage(newMessage.trim());
+    setNewMessage("");
   };
 
   const formatTime = (dateString: string) => {
@@ -216,28 +130,8 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
     }
   };
 
-  const addReaction = (messageId: string, emoji: string) => {
-    const userId = currentUser?.id || 'guest';
-    setMessages(prev => prev.map(msg => {
-      if (msg.id === messageId) {
-        const reactions = msg.reactions || {};
-        const currentReactions = reactions[emoji] || [];
-        
-        if (currentReactions.includes(userId)) {
-          // Remove reaction
-          reactions[emoji] = currentReactions.filter(id => id !== userId);
-          if (reactions[emoji].length === 0) {
-            delete reactions[emoji];
-          }
-        } else {
-          // Add reaction
-          reactions[emoji] = [...currentReactions, userId];
-        }
-        
-        return { ...msg, reactions: { ...reactions } };
-      }
-      return msg;
-    }));
+  const handleAddReaction = async (messageId: string, emoji: string) => {
+    await addReaction(messageId, emoji);
     setShowEmojiPicker(null);
   };
 
@@ -268,26 +162,17 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
 
     // Create message with attachment
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const message: Message = {
-        id: Math.random().toString(),
-        user_id: currentUser?.id || 'guest',
-        username: currentUser ? (currentUser.email?.split('@')[0] || 'User') : guestName || 'Guest',
-        content: `Shared ${file.type.includes('gif') ? 'a GIF' : 'an image'}`,
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-        attachment: {
-          type: file.type.includes('gif') ? 'gif' : 'image',
-          url: e.target?.result as string,
-          name: file.name
-        }
+    reader.onload = async (e) => {
+      const attachment = {
+        type: file.type.includes('gif') ? 'gif' as const : 'image' as const,
+        url: e.target?.result as string,
+        name: file.name
       };
 
-      setMessages(prev => [...prev, message]);
-      toast({
-        title: "File shared",
-        description: "Your file has been shared in the chat",
-      });
+      await sendChatMessage(
+        `Shared ${file.type.includes('gif') ? 'a GIF' : 'an image'}`,
+        attachment
+      );
     };
     reader.readAsDataURL(file);
     
@@ -371,15 +256,15 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
                   {message.reactions && Object.keys(message.reactions).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {Object.entries(message.reactions).map(([emoji, userIds]) => (
-                        <Button
-                          key={emoji}
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => addReaction(message.id, emoji)}
-                        >
-                          {emoji} {userIds.length}
-                        </Button>
+                          <Button
+                            key={emoji}
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleAddReaction(message.id, emoji)}
+                          >
+                            {emoji} {userIds.length}
+                          </Button>
                       ))}
                     </div>
                   )}
@@ -402,7 +287,7 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
                               key={emoji}
                               variant="ghost"
                               className="h-10 w-10 p-0 text-lg hover:bg-muted"
-                              onClick={() => addReaction(message.id, emoji)}
+                              onClick={() => handleAddReaction(message.id, emoji)}
                             >
                               {emoji}
                             </Button>
@@ -416,24 +301,6 @@ const ChatInterface = ({ currentUser, guestName, onRequestName }: ChatInterfaceP
             ))
           )}
           
-          {/* Typing indicator */}
-          {someoneTyping && (
-            <div className="flex gap-3 animate-pulse">
-              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                <span className="text-xs">💬</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                  </div>
-                  <span>Someone is typing...</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

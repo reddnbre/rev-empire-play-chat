@@ -9,6 +9,7 @@ import GameLobby from "./GameLobby";
 import InGameChat from "./InGameChat";
 import CelebrationOverlay from "./CelebrationOverlay";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TicTacToeProps {
   onBack: () => void;
@@ -32,6 +33,7 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
   const [chatMinimized, setChatMinimized] = useState(true);
   const [spectatorCount] = useState(Math.floor(Math.random() * 5) + 1);
   const { playMove, playWin, playLose } = useSoundEffects();
+  const { user } = useAuth();
 
   const winningCombinations = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -167,37 +169,17 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
     setShowCelebration(false);
   };
 
-  const handleStartPvP = () => {
-    setGameMode("pvp");
-    setGameStatus("waiting");
-    // Simulate finding a player after 5-10 seconds
-    setTimeout(() => {
-      setGameStatus("playing");
-      toast({
-        title: "Player found!",
-        description: "Starting game...",
-      });
-    }, Math.random() * 5000 + 5000);
-  };
-
-  const handleStartBot = () => {
-    setGameMode("bot");
-    setGameStatus("playing");
-  };
-
-  const handleSpectate = () => {
-    setGameStatus("spectating");
-    // Simulate spectating a random game
-    const randomBoard = Array(9).fill(null);
-    const moves = Math.floor(Math.random() * 6) + 1;
-    for (let i = 0; i < moves; i++) {
-      const pos = Math.floor(Math.random() * 9);
-      if (!randomBoard[pos]) {
-        randomBoard[pos] = i % 2 === 0 ? "X" : "O";
-      }
+  const handleStartGame = (session: any) => {
+    if (session.player2_id === 'bot') {
+      setGameMode("bot");
+    } else {
+      setGameMode("pvp");
     }
-    setBoard(randomBoard);
-    setCurrentPlayer(moves % 2 === 0 ? "X" : "O");
+    setGameStatus("playing");
+    toast({
+      title: "Game started!",
+      description: session.player2_id === 'bot' ? "Playing against bot" : `Playing against ${session.player2_name}`,
+    });
   };
 
   const resetScores = () => {
@@ -210,9 +192,9 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
     return (
       <GameLobby
         gameName="TicTacToe"
-        onStartWithBot={handleStartBot}
-        onStartPvP={handleStartPvP}
-        onSpectate={handleSpectate}
+        gameType="tictactoe"
+        currentUser={user}
+        onStartGame={handleStartGame}
         onBack={onBack}
       />
     );
@@ -331,7 +313,7 @@ const TicTacToe = ({ onBack }: TicTacToeProps) => {
               </Button>
               <Button
                 variant="default"
-                onClick={handleStartPvP}
+                onClick={() => setGameStatus("lobby")}
               >
                 Join Game
               </Button>
