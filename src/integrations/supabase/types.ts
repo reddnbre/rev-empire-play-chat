@@ -80,6 +80,78 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          attachment: Json | null
+          content: string
+          created_at: string
+          expires_at: string
+          id: string
+          reactions: Json | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          attachment?: Json | null
+          content: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reactions?: Json | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          attachment?: Json | null
+          content?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reactions?: Json | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      game_sessions: {
+        Row: {
+          created_at: string
+          game_data: Json | null
+          game_type: string
+          id: string
+          player1_id: string
+          player1_name: string
+          player2_id: string | null
+          player2_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          game_data?: Json | null
+          game_type: string
+          id?: string
+          player1_id: string
+          player1_name: string
+          player2_id?: string | null
+          player2_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          game_data?: Json | null
+          game_type?: string
+          id?: string
+          player1_id?: string
+          player1_name?: string
+          player2_id?: string | null
+          player2_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           created_at: string
@@ -158,6 +230,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_presence: {
+        Row: {
+          last_seen: string
+          status: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          last_seen?: string
+          status?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          last_seen?: string
+          status?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -187,6 +280,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_expired_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       handle_bot_join: {
         Args: Record<PropertyKey, never>
         Returns: undefined
